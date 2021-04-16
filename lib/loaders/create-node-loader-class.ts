@@ -1,4 +1,5 @@
 import DataLoader from "dataloader";
+import { snakeCase } from "snake-case";
 
 import {
   sql,
@@ -12,7 +13,8 @@ import {
 } from "slonik/dist/types";
 export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
   table: string;
-  column: string;
+  column?: Extract<keyof TRecord, string> | undefined;
+  columnNameTransformer?: ((column: string) => string) | undefined;
   columnType?: TypeNameIdentifierType | SqlTokenType;
   queryFactory: (
     expressions: {
@@ -22,11 +24,18 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
   ) => TaggedTemplateLiteralInvocationType<unknown>;
   typeName?: string | ((node: TRecord) => string);
 }) => {
-  const { table, column, columnType = "int4", queryFactory, typeName } = config;
+  const {
+    table,
+    column = "id",
+    columnNameTransformer = snakeCase,
+    columnType = "int4",
+    queryFactory,
+    typeName,
+  } = config;
 
   return class NodeLoader extends DataLoader<
     PrimitiveValueExpressionType,
-    (TRecord & { __typename?: string }) | null,
+    TRecord & { __typename?: string },
     string
   > {
     constructor(
@@ -34,7 +43,7 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
       context: TContext,
       loaderOptions?: DataLoader.Options<
         PrimitiveValueExpressionType,
-        (TRecord & { __typename?: string }) | null,
+        TRecord & { __typename?: string },
         string
       >
     ) {
@@ -42,7 +51,7 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
         async (loaderKeys) => {
           const where = sql`${sql.identifier([
             table,
-            column,
+            columnNameTransformer(column),
           ])} = ANY(${sql.array(loaderKeys, columnType)})`;
           const records = await connection.any<any>(
             queryFactory({ where }, context)
