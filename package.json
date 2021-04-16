@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Utilities for creating DataLoaders using Slonik",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "jest"
   },
