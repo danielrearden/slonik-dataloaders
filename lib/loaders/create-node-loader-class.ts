@@ -20,13 +20,13 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
     },
     context: TContext
   ) => TaggedTemplateLiteralInvocationType<unknown>;
-  typeName: string | ((node: TRecord) => string);
+  typeName?: string | ((node: TRecord) => string);
 }) => {
   const { table, column, columnType = "int4", queryFactory, typeName } = config;
 
   return class NodeLoader extends DataLoader<
     PrimitiveValueExpressionType,
-    (TRecord & { __typename: string }) | null,
+    (TRecord & { __typename?: string }) | null,
     string
   > {
     constructor(
@@ -34,7 +34,7 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
       context: TContext,
       loaderOptions?: DataLoader.Options<
         PrimitiveValueExpressionType,
-        (TRecord & { __typename: string }) | null,
+        (TRecord & { __typename?: string }) | null,
         string
       >
     ) {
@@ -54,8 +54,10 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
             });
 
             if (record) {
-              record.__typename =
-                typeof typeName === "function" ? typeName(record) : typeName;
+              if (typeName) {
+                record.__typename =
+                  typeof typeName === "function" ? typeName(record) : typeName;
+              }
               return record;
             }
 
