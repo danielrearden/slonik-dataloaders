@@ -23,6 +23,7 @@ export interface PageInfo {
 }
 
 export interface Connection<TEdge> {
-  pageInfo: PageInfo;
   edges: (TEdge & { cursor: string })[];
+  count: number;
+  pageInfo: PageInfo;
 }

@@ -1,3 +1,9 @@
+import {
+  FieldNode,
+  GraphQLResolveInfo,
+  OperationDefinitionNode,
+  parse,
+} from "graphql";
 import { createPool, DatabasePoolType, sql } from "slonik";
 import { createConnectionLoaderClass } from "../../lib";
 
@@ -5,6 +11,20 @@ type Bar = {
   id: number;
   uid: string;
   value: string;
+};
+
+const getInfo = (
+  fields: string[]
+): Pick<GraphQLResolveInfo, "fieldNodes" | "fragments"> => {
+  const document = parse(`{ connection { ${fields.join(" ")} } }`);
+
+  return {
+    fieldNodes: [
+      (document.definitions[0] as OperationDefinitionNode).selectionSet
+        .selections[0] as FieldNode,
+    ],
+    fragments: {},
+  };
 };
 
 const BarConnectionLoader = createConnectionLoaderClass<
@@ -272,6 +292,61 @@ describe("createConnectionLoaderClass", () => {
     expect(results[0].edges[8].id).toEqual(1);
     expect(results[1].edges[0].id).toEqual(1);
     expect(results[1].edges[8].id).toEqual(9);
+  });
+
+  it("gets the count", async () => {
+    const loader = new BarConnectionLoader(pool, {});
+    const results = await Promise.all([
+      loader.load({
+        info: getInfo(["edges", "count"]),
+        where: ({ node: { value } }) => sql`upper(${value}) = 'CCC'`,
+      }),
+      loader.load({
+        info: getInfo(["edges", "count"]),
+        where: ({ node: { value } }) => sql`upper(${value}) = 'EEE'`,
+      }),
+    ]);
+
+    expect(results[0].count).toEqual(2);
+    expect(results[1].count).toEqual(1);
+  });
+
+  it("gets the count without fetching edges", async () => {
+    const loader = new BarConnectionLoader(pool, {});
+    const results = await Promise.all([
+      loader.load({
+        info: getInfo(["count"]),
+        where: ({ node: { value } }) => sql`upper(${value}) = 'CCC'`,
+      }),
+      loader.load({
+        info: getInfo(["count"]),
+        where: ({ node: { value } }) => sql`upper(${value}) = 'EEE'`,
+      }),
+    ]);
+
+    expect(results[0].count).toEqual(2);
+    expect(results[0].edges.length).toEqual(0);
+    expect(results[1].count).toEqual(1);
+    expect(results[1].edges.length).toEqual(0);
+  });
+
+  it("gets the edges without fetching edges", async () => {
+    const loader = new BarConnectionLoader(pool, {});
+    const results = await Promise.all([
+      loader.load({
+        info: getInfo(["edges"]),
+        where: ({ node: { value } }) => sql`upper(${value}) = 'CCC'`,
+      }),
+      loader.load({
+        info: getInfo(["pageInfo"]),
+        where: ({ node: { value } }) => sql`upper(${value}) = 'EEE'`,
+      }),
+    ]);
+
+    expect(results[0].count).toEqual(0);
+    expect(results[0].edges.length).toEqual(2);
+    expect(results[1].count).toEqual(0);
+    expect(results[1].edges.length).toEqual(1);
   });
 
   it("loads records based on context", async () => {

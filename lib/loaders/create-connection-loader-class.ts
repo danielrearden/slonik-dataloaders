@@ -1,4 +1,5 @@
 import DataLoader from "dataloader";
+import { GraphQLResolveInfo } from "graphql";
 import {
   CommonQueryMethodsType,
   sql,
@@ -11,7 +12,12 @@ import {
   Connection,
   OrderDirection,
 } from "../types";
-import { fromCursor, getColumnIdentifiers, toCursor } from "../utilities";
+import {
+  fromCursor,
+  getColumnIdentifiers,
+  getRequestedFields,
+  toCursor,
+} from "../utilities";
 
 export type DataLoaderKey<TTableColumns extends ColumnNamesByTable> = {
   cursor?: string | null;
@@ -23,6 +29,7 @@ export type DataLoaderKey<TTableColumns extends ColumnNamesByTable> = {
   where?: (
     identifiers: ColumnIdentifiersByTable<TTableColumns>
   ) => TaggedTemplateLiteralInvocationType<unknown>;
+  info?: Pick<GraphQLResolveInfo, "fieldNodes" | "fragments">;
 };
 
 export const createConnectionLoaderClass = <
@@ -65,14 +72,23 @@ export const createConnectionLoaderClass = <
     ) {
       super(
         async (loaderKeys) => {
-          const queries = loaderKeys.map((loaderKey, index) => {
+          const edgesQueries: TaggedTemplateLiteralInvocationType<unknown>[] = [];
+          const countQueries: TaggedTemplateLiteralInvocationType<unknown>[] = [];
+
+          loaderKeys.forEach((loaderKey, index) => {
             const {
               cursor,
+              info,
               limit,
               orderBy,
               reverse = false,
               where,
             } = loaderKey;
+
+            // If a GraphQLResolveInfo object was not provided, we will assume both pageInfo and edges were requested
+            const requestedFields = info
+              ? getRequestedFields(info)
+              : new Set(["pageInfo", "edges"]);
 
             const conditions: SqlTokenType[] = where
               ? [where(columnIdentifiersByTable)]
@@ -81,84 +97,128 @@ export const createConnectionLoaderClass = <
 
             const selectExpressions = [sql`${queryKey} "key"`];
 
-            const orderByExpressions: [SqlTokenType, OrderDirection][] = orderBy
-              ? orderBy(columnIdentifiersByTable)
-              : [];
-
-            orderByExpressions.forEach(([expression], idx) => {
-              selectExpressions.push(
-                sql`${expression} ${sql.identifier(["o" + idx])}`
-              );
-            });
-
-            const orderByClause = orderByExpressions.length
-              ? sql.join(
-                  orderByExpressions.map(
-                    ([, direction], idx) =>
-                      sql`${sql.identifier(["o" + idx])} ${
-                        direction === (reverse ? "DESC" : "ASC")
-                          ? sql`ASC`
-                          : sql`DESC`
-                      }`
-                  ),
-                  sql`,`
-                )
-              : sql`true`;
-
-            if (cursor) {
-              const values = fromCursor(cursor);
-              conditions.push(
-                sql.join(
-                  orderByExpressions.map((_orderByExpression, outerIndex) => {
-                    const expressions = orderByExpressions.slice(
-                      0,
-                      outerIndex + 1
-                    );
-
-                    return sql`(${sql.join(
-                      expressions.map(([expression, direction], innerIndex) => {
-                        let comparisonOperator = sql`=`;
-                        if (innerIndex === expressions.length - 1) {
-                          comparisonOperator =
-                            direction === (reverse ? "DESC" : "ASC")
-                              ? sql`>`
-                              : sql`<`;
-                        }
-
-                        return sql`${expression} ${comparisonOperator} ${values[innerIndex]}`;
-                      }),
-                      sql` AND `
-                    )})`;
-                  }),
-                  sql` OR `
-                )
+            if (requestedFields.has("count")) {
+              countQueries.push(
+                sql`(
+                  SELECT
+                    ${sql.join(
+                      [...selectExpressions, sql`count(*) count`],
+                      sql`, `
+                    )}
+                  FROM (
+                    ${queryFactory(
+                      {
+                        limit: null,
+                        orderBy: sql`true`,
+                        select: sql`null`,
+                        where: conditions.length
+                          ? sql`${sql.join(conditions, sql` AND `)}`
+                          : sql`true`,
+                      },
+                      context
+                    )}
+                  ) count_subquery
+                )`
               );
             }
 
-            const whereExpression = conditions.length
-              ? sql`${sql.join(conditions, sql` AND `)}`
-              : sql`true`;
+            if (
+              requestedFields.has("pageInfo") ||
+              requestedFields.has("edges")
+            ) {
+              const orderByExpressions: [
+                SqlTokenType,
+                OrderDirection
+              ][] = orderBy ? orderBy(columnIdentifiersByTable) : [];
 
-            return sql`(${queryFactory(
-              {
-                limit: limit ? limit + 1 : null,
-                orderBy: orderByClause,
-                select: sql.join(selectExpressions, sql`, `),
-                where: whereExpression,
-              },
-              context
-            )})`;
+              orderByExpressions.forEach(([expression], idx) => {
+                selectExpressions.push(
+                  sql`${expression} ${sql.identifier(["o" + idx])}`
+                );
+              });
+
+              const orderByClause = orderByExpressions.length
+                ? sql.join(
+                    orderByExpressions.map(
+                      ([, direction], idx) =>
+                        sql`${sql.identifier(["o" + idx])} ${
+                          direction === (reverse ? "DESC" : "ASC")
+                            ? sql`ASC`
+                            : sql`DESC`
+                        }`
+                    ),
+                    sql`,`
+                  )
+                : sql`true`;
+
+              if (cursor) {
+                const values = fromCursor(cursor);
+                conditions.push(
+                  sql.join(
+                    orderByExpressions.map((_orderByExpression, outerIndex) => {
+                      const expressions = orderByExpressions.slice(
+                        0,
+                        outerIndex + 1
+                      );
+
+                      return sql`(${sql.join(
+                        expressions.map(
+                          ([expression, direction], innerIndex) => {
+                            let comparisonOperator = sql`=`;
+                            if (innerIndex === expressions.length - 1) {
+                              comparisonOperator =
+                                direction === (reverse ? "DESC" : "ASC")
+                                  ? sql`>`
+                                  : sql`<`;
+                            }
+
+                            return sql`${expression} ${comparisonOperator} ${values[innerIndex]}`;
+                          }
+                        ),
+                        sql` AND `
+                      )})`;
+                    }),
+                    sql` OR `
+                  )
+                );
+              }
+
+              const whereExpression = conditions.length
+                ? sql`${sql.join(conditions, sql` AND `)}`
+                : sql`true`;
+
+              edgesQueries.push(
+                sql`(${queryFactory(
+                  {
+                    limit: limit ? limit + 1 : null,
+                    orderBy: orderByClause,
+                    select: sql.join(selectExpressions, sql`, `),
+                    where: whereExpression,
+                  },
+                  context
+                )})`
+              );
+            }
           });
 
-          const records = await connection.any<any>(
-            sql`${sql.join(queries, sql`UNION ALL`)}`
-          );
+          const [edgesRecords, countRecords] = await Promise.all([
+            edgesQueries.length
+              ? connection.any<any>(
+                  sql`${sql.join(edgesQueries, sql`UNION ALL`)}`
+                )
+              : [],
+            countQueries.length
+              ? connection.any<any>(
+                  sql`${sql.join(countQueries, sql`UNION ALL`)}`
+                )
+              : [],
+          ]);
 
           const connections = loaderKeys.map((loaderKey, index) => {
             const queryKey = String(index);
             const { cursor, limit, reverse = false } = loaderKey;
 
-            const edges = records
+            const edges = edgesRecords
               .filter((record) => {
                 return record.key === queryKey;
               })
@@ -202,7 +262,13 @@ export const createConnectionLoaderClass = <
               startCursor: slicedEdges[0]?.cursor || null,
             };
 
+            const count =
+              countRecords.find((record) => {
+                return record.key === queryKey;
+              })?.count ?? 0;
+
             return {
+              count,
               edges: slicedEdges,
               pageInfo,
             };
