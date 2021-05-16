@@ -3,7 +3,7 @@ import { snakeCase } from "snake-case";
 
 import {
   sql,
-  DatabasePoolType,
+  CommonQueryMethodsType,
   TaggedTemplateLiteralInvocationType,
   SqlTokenType,
 } from "slonik";
@@ -39,7 +39,7 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
     string
   > {
     constructor(
-      connection: DatabasePoolType,
+      connection: CommonQueryMethodsType,
       context: TContext,
       loaderOptions?: DataLoader.Options<
         PrimitiveValueExpressionType,
