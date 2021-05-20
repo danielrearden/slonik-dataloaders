@@ -154,7 +154,7 @@ export const createConnectionLoaderClass = <
               if (cursor) {
                 const values = fromCursor(cursor);
                 conditions.push(
-                  sql.join(
+                  sql`(${sql.join(
                     orderByExpressions.map((_orderByExpression, outerIndex) => {
                       const expressions = orderByExpressions.slice(
                         0,
@@ -179,7 +179,7 @@ export const createConnectionLoaderClass = <
                       )})`;
                     }),
                     sql` OR `
-                  )
+                  )})`
                 );
               }
 
