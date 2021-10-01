@@ -131,17 +131,22 @@ export const createConnectionLoaderClass = <
                 OrderDirection
               ][] = orderBy ? orderBy(columnIdentifiersByTable) : [];
 
-              orderByExpressions.forEach(([expression], idx) => {
-                selectExpressions.push(
-                  sql`${expression} ${sql.identifier(["o" + idx])}`
-                );
-              });
+              selectExpressions.push(
+                sql`json_build_array(${
+                  orderByExpressions.length
+                    ? sql.join(
+                        orderByExpressions.map(([expression]) => expression),
+                        sql`,`
+                      )
+                    : sql``
+                }) "o"`
+              );
 
               const orderByClause = orderByExpressions.length
                 ? sql.join(
                     orderByExpressions.map(
-                      ([, direction], idx) =>
-                        sql`${sql.identifier(["o" + idx])} ${
+                      ([expression, direction]) =>
+                        sql`${expression} ${
                           direction === (reverse ? "DESC" : "ASC")
                             ? sql`ASC`
                             : sql`DESC`
@@ -230,7 +235,7 @@ export const createConnectionLoaderClass = <
 
                 let index = 0;
                 while (true) {
-                  const value = record["o" + index];
+                  const value = record["o"]?.[index];
                   if (value !== undefined) {
                     cursorValues.push(value);
                     index++;

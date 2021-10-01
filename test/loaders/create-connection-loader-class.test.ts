@@ -5,6 +5,8 @@ import {
   parse,
 } from "graphql";
 import { createPool, DatabasePoolType, sql } from "slonik";
+// @ts-ignore
+import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import { createConnectionLoaderClass } from "../../lib";
 
 type Bar = {
@@ -49,7 +51,9 @@ describe("createConnectionLoaderClass", () => {
   let pool: DatabasePoolType;
 
   beforeAll(async () => {
-    pool = createPool(process.env.POSTGRES_DSN || "");
+    pool = createPool(process.env.POSTGRES_DSN || "", {
+      interceptors: [createQueryLoggingInterceptor()],
+    });
 
     await pool.query(sql`
       CREATE TABLE IF NOT EXISTS test_table_bar (
@@ -288,6 +292,26 @@ describe("createConnectionLoaderClass", () => {
     ]);
 
     expect(poolAnySpy).toHaveBeenCalledTimes(1);
+    expect(results[0].edges[0].id).toEqual(9);
+    expect(results[0].edges[8].id).toEqual(1);
+    expect(results[1].edges[0].id).toEqual(1);
+    expect(results[1].edges[8].id).toEqual(9);
+  });
+
+  it("batches calls with varying numbers of order by expressions", async () => {
+    const loader = new BarConnectionLoader(pool, {});
+    const results = await Promise.all([
+      loader.load({
+        orderBy: ({ node: { uid, id } }) => [
+          [uid, "ASC"],
+          [id, "DESC"],
+        ],
+      }),
+      loader.load({
+        orderBy: ({ node: { uid } }) => [[uid, "DESC"]],
+      }),
+    ]);
+
     expect(results[0].edges[0].id).toEqual(9);
     expect(results[0].edges[8].id).toEqual(1);
     expect(results[1].edges[0].id).toEqual(1);

@@ -1,4 +1,6 @@
 import { createPool, DatabasePoolType, sql } from "slonik";
+// @ts-ignore
+import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import { createNodeLoaderClass } from "../../lib";
 
 type Foo = {
@@ -22,7 +24,9 @@ describe("createRecordByUniqueColumnLoader", () => {
   let pool: DatabasePoolType;
 
   beforeAll(async () => {
-    pool = createPool(process.env.POSTGRES_DSN || "");
+    pool = createPool(process.env.POSTGRES_DSN || "", {
+      interceptors: [createQueryLoggingInterceptor()],
+    });
 
     await pool.query(sql`
       CREATE TABLE IF NOT EXISTS test_table_foo (
