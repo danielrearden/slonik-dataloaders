@@ -91,7 +91,7 @@ export const createConnectionLoaderClass = <
               : new Set(["pageInfo", "edges"]);
 
             const conditions: SqlTokenType[] = where
-              ? [where(columnIdentifiersByTable)]
+              ? [sql`(${where(columnIdentifiersByTable)})`]
               : [];
             const queryKey = String(index);
 
