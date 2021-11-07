@@ -2,18 +2,10 @@ import { IdentifierSqlTokenType } from "slonik";
 
 export type OrderDirection = "ASC" | "DESC";
 
-export interface ColumnNamesByTable {
-  [key: string]: string;
-}
-
-export type ColumnIdentifiersByTable<
-  TColumnNamesByTable extends ColumnNamesByTable
-> = {
-  [K in keyof TColumnNamesByTable]: Record<
-    TColumnNamesByTable[K],
-    IdentifierSqlTokenType
-  >;
-};
+export type ColumnIdentifiers<TResult> = Record<
+  keyof TResult,
+  IdentifierSqlTokenType
+>;
 
 export interface PageInfo {
   hasNextPage: boolean;
@@ -22,8 +14,8 @@ export interface PageInfo {
   endCursor: string | null;
 }
 
-export interface Connection<TEdge> {
-  edges: (TEdge & { cursor: string })[];
+export interface Connection<TResult> {
+  edges: (TResult & { node: TResult; cursor: string })[];
   count: number;
   pageInfo: PageInfo;
 }

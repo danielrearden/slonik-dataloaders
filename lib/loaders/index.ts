@@ -1,2 +1,2 @@
-export * from "./create-connection-loader-class";
-export * from "./create-node-loader-class";
+export * from "./createConnectionLoaderClass";
+export * from "./createNodeByIdLoaderClass";

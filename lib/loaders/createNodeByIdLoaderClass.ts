@@ -11,26 +11,21 @@ import {
   PrimitiveValueExpressionType,
   TypeNameIdentifierType,
 } from "slonik/dist/types";
-export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
-  table: string;
-  column?: Extract<keyof TRecord, string> | undefined;
+
+const TABLE_ALIAS = "t1";
+
+export const createNodeByIdLoaderClass = <TRecord>(config: {
+  column?: {
+    name?: Extract<keyof TRecord, string> | undefined;
+    type?: TypeNameIdentifierType | SqlTokenType;
+  };
   columnNameTransformer?: ((column: string) => string) | undefined;
-  columnType?: TypeNameIdentifierType | SqlTokenType;
-  queryFactory: (
-    expressions: {
-      where: SqlTokenType;
-    },
-    context: TContext
-  ) => TaggedTemplateLiteralInvocationType<unknown>;
-  typeName?: string | ((node: TRecord) => string);
+  query: TaggedTemplateLiteralInvocationType<unknown>;
 }) => {
   const {
-    table,
-    column = "id",
+    column: { name: columnName = "id", type: columnType = "int4" } = {},
     columnNameTransformer = snakeCase,
-    columnType = "int4",
-    queryFactory,
-    typeName,
+    query,
   } = config;
 
   return class NodeLoader extends DataLoader<
@@ -39,8 +34,7 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
     string
   > {
     constructor(
-      connection: CommonQueryMethodsType,
-      context: TContext,
+      pool: CommonQueryMethodsType,
       loaderOptions?: DataLoader.Options<
         PrimitiveValueExpressionType,
         TRecord & { __typename?: string },
@@ -50,23 +44,25 @@ export const createNodeLoaderClass = <TRecord, TContext = unknown>(config: {
       super(
         async (loaderKeys) => {
           const where = sql`${sql.identifier([
-            table,
-            columnNameTransformer(column),
+            TABLE_ALIAS,
+            columnNameTransformer(columnName),
           ])} = ANY(${sql.array(loaderKeys, columnType)})`;
-          const records = await connection.any<any>(
-            queryFactory({ where }, context)
+          const records = await pool.any<any>(
+            sql`
+              SELECT *
+              FROM (
+                ${query}
+              ) ${sql.identifier([TABLE_ALIAS])}
+              WHERE ${where}
+            `
           );
 
           const recordsByLoaderKey = loaderKeys.map((value) => {
             const record = records.find((record) => {
-              return String(record[column]) === String(value);
+              return String(record[columnName]) === String(value);
             });
 
             if (record) {
-              if (typeName) {
-                record.__typename =
-                  typeof typeName === "function" ? typeName(record) : typeName;
-              }
               return record;
             }
 

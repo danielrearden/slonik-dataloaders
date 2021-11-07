@@ -6,12 +6,8 @@ import {
   SqlTokenType,
   TaggedTemplateLiteralInvocationType,
 } from "slonik";
-import {
-  ColumnIdentifiersByTable,
-  ColumnNamesByTable,
-  Connection,
-  OrderDirection,
-} from "../types";
+import { snakeCase } from "snake-case";
+import { ColumnIdentifiers, Connection, OrderDirection } from "../types";
 import {
   fromCursor,
   getColumnIdentifiers,
@@ -19,54 +15,42 @@ import {
   toCursor,
 } from "../utilities";
 
-export type DataLoaderKey<TTableColumns extends ColumnNamesByTable> = {
+export type DataLoaderKey<TResult> = {
   cursor?: string | null;
   limit?: number | null;
   reverse?: boolean;
   orderBy?: (
-    identifiers: ColumnIdentifiersByTable<TTableColumns>
+    identifiers: ColumnIdentifiers<TResult>
   ) => [SqlTokenType, OrderDirection][];
   where?: (
-    identifiers: ColumnIdentifiersByTable<TTableColumns>
+    identifiers: ColumnIdentifiers<TResult>
   ) => TaggedTemplateLiteralInvocationType<unknown>;
   info?: Pick<GraphQLResolveInfo, "fieldNodes" | "fragments">;
 };
 
-export const createConnectionLoaderClass = <
-  TTableColumns extends ColumnNamesByTable,
-  TEdge = { id: number },
-  TContext = unknown
->(config: {
-  tables: { [P in keyof TTableColumns]: string };
-  queryFactory: (
-    expressions: {
-      limit: number | null;
-      orderBy: SqlTokenType;
-      select: SqlTokenType;
-      where: SqlTokenType;
-    },
-    context: TContext
-  ) => TaggedTemplateLiteralInvocationType<unknown>;
-  columnNameTransformer?: (column: string) => string;
-}) => {
-  const { tables, queryFactory, columnNameTransformer } = config;
-  const columnIdentifiersByTable = Object.keys(tables).reduce((acc, key) => {
-    acc[key] = getColumnIdentifiers(tables[key], columnNameTransformer);
+const SORT_COLUMN_ALIAS = "s1";
+const TABLE_ALIAS = "t1";
 
-    return acc;
-  }, {} as any);
+export const createConnectionLoaderClass = <TResult>(config: {
+  columnNameTransformer?: (column: string) => string;
+  query: TaggedTemplateLiteralInvocationType<unknown>;
+}) => {
+  const { columnNameTransformer = snakeCase, query } = config;
+  const columnIdentifiers = getColumnIdentifiers<TResult>(
+    TABLE_ALIAS,
+    columnNameTransformer
+  );
 
   return class ConnectionLoaderClass extends DataLoader<
-    DataLoaderKey<TTableColumns>,
-    Connection<TEdge>,
+    DataLoaderKey<TResult>,
+    Connection<TResult>,
     string
   > {
     constructor(
-      connection: CommonQueryMethodsType,
-      context: TContext,
+      pool: CommonQueryMethodsType,
       dataLoaderOptions?: DataLoader.Options<
-        DataLoaderKey<TTableColumns>,
-        Connection<TEdge>,
+        DataLoaderKey<TResult>,
+        Connection<TResult>,
         string
       >
     ) {
@@ -88,10 +72,10 @@ export const createConnectionLoaderClass = <
             // If a GraphQLResolveInfo object was not provided, we will assume both pageInfo and edges were requested
             const requestedFields = info
               ? getRequestedFields(info)
-              : new Set(["pageInfo", "edges"]);
+              : new Set(["pageInfo", "edges", "count"]);
 
             const conditions: SqlTokenType[] = where
-              ? [sql`(${where(columnIdentifiersByTable)})`]
+              ? [sql`(${where(columnIdentifiers)})`]
               : [];
             const queryKey = String(index);
 
@@ -106,18 +90,13 @@ export const createConnectionLoaderClass = <
                       sql`, `
                     )}
                   FROM (
-                    ${queryFactory(
-                      {
-                        limit: null,
-                        orderBy: sql`true`,
-                        select: sql`null`,
-                        where: conditions.length
-                          ? sql`${sql.join(conditions, sql` AND `)}`
-                          : sql`true`,
-                      },
-                      context
-                    )}
-                  ) count_subquery
+                    ${query}
+                  ) ${sql.identifier([TABLE_ALIAS])}
+                  WHERE ${
+                    conditions.length
+                      ? sql`${sql.join(conditions, sql` AND `)}`
+                      : sql`true`
+                  }
                 )`
               );
             }
@@ -129,9 +108,10 @@ export const createConnectionLoaderClass = <
               const orderByExpressions: [
                 SqlTokenType,
                 OrderDirection
-              ][] = orderBy ? orderBy(columnIdentifiersByTable) : [];
+              ][] = orderBy ? orderBy(columnIdentifiers) : [];
 
               selectExpressions.push(
+                sql`${sql.identifier([TABLE_ALIAS])}.*`,
                 sql`json_build_array(${
                   orderByExpressions.length
                     ? sql.join(
@@ -139,7 +119,7 @@ export const createConnectionLoaderClass = <
                         sql`,`
                       )
                     : sql``
-                }) "o"`
+                }) ${sql.identifier([SORT_COLUMN_ALIAS])}`
               );
 
               const orderByClause = orderByExpressions.length
@@ -193,29 +173,26 @@ export const createConnectionLoaderClass = <
                 : sql`true`;
 
               edgesQueries.push(
-                sql`(${queryFactory(
-                  {
-                    limit: limit ? limit + 1 : null,
-                    orderBy: orderByClause,
-                    select: sql.join(selectExpressions, sql`, `),
-                    where: whereExpression,
-                  },
-                  context
-                )})`
+                sql`(
+                  SELECT
+                    ${sql.join(selectExpressions, sql`, `)}
+                  FROM (
+                    ${query}
+                  ) ${sql.identifier([TABLE_ALIAS])}
+                  WHERE ${whereExpression}
+                  ORDER BY ${orderByClause}
+                  LIMIT ${limit ? limit + 1 : null}
+                )`
               );
             }
           });
 
           const [edgesRecords, countRecords] = await Promise.all([
             edgesQueries.length
-              ? connection.any<any>(
-                  sql`${sql.join(edgesQueries, sql`UNION ALL`)}`
-                )
+              ? pool.any<any>(sql`${sql.join(edgesQueries, sql`UNION ALL`)}`)
               : [],
             countQueries.length
-              ? connection.any<any>(
-                  sql`${sql.join(countQueries, sql`UNION ALL`)}`
-                )
+              ? pool.any<any>(sql`${sql.join(countQueries, sql`UNION ALL`)}`)
               : [],
           ]);
 
@@ -229,13 +206,11 @@ export const createConnectionLoaderClass = <
               })
               .map((record) => {
                 const { key, ...rest } = record;
-
-                const edge = rest as TEdge;
                 const cursorValues = new Array();
 
                 let index = 0;
                 while (true) {
-                  const value = record["o"]?.[index];
+                  const value = record[SORT_COLUMN_ALIAS]?.[index];
                   if (value !== undefined) {
                     cursorValues.push(value);
                     index++;
@@ -245,8 +220,9 @@ export const createConnectionLoaderClass = <
                 }
 
                 return {
+                  ...rest,
                   cursor: toCursor(cursorValues),
-                  ...edge,
+                  node: rest,
                 };
               });
 
@@ -283,7 +259,24 @@ export const createConnectionLoaderClass = <
         },
         {
           ...dataLoaderOptions,
-          cache: false,
+          cacheKeyFn: ({
+            cursor,
+            info,
+            limit,
+            orderBy,
+            reverse = false,
+            where,
+          }) => {
+            const requestedFields = info
+              ? getRequestedFields(info)
+              : new Set(["pageInfo", "edges"]);
+
+            return `${cursor}|${reverse}|${limit}|${JSON.stringify(
+              orderBy?.(columnIdentifiers)
+            )}|${JSON.stringify(
+              where?.(columnIdentifiers)
+            )}|${requestedFields.values()}`;
+          },
         }
       );
     }

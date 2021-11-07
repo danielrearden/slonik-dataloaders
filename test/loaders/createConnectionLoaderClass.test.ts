@@ -29,21 +29,11 @@ const getInfo = (
   };
 };
 
-const BarConnectionLoader = createConnectionLoaderClass<
-  { node: keyof Bar },
-  { id: number }
->({
-  tables: {
-    node: "test_table_bar",
-  },
-  queryFactory: ({ limit, orderBy, select, where }) => sql`
+const BarConnectionLoader = createConnectionLoaderClass<Bar>({
+  query: sql`
     SELECT
-      ${select},
-      id
+      *
     FROM test_table_bar
-    WHERE ${where}
-    ORDER BY ${orderBy}
-    LIMIT ${limit}
   `,
 });
 
@@ -103,100 +93,100 @@ describe("createConnectionLoaderClass", () => {
   it("loads records in ascending order", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const result = await loader.load({
-      orderBy: ({ node: { uid } }) => [[uid, "ASC"]],
+      orderBy: ({ uid }) => [[uid, "ASC"]],
     });
 
-    expect(result.edges[0].id).toEqual(9);
-    expect(result.edges[8].id).toEqual(1);
+    expect(result.edges[0].node.id).toEqual(9);
+    expect(result.edges[8].node.id).toEqual(1);
   });
 
   it("loads records in descending order", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const result = await loader.load({
-      orderBy: ({ node: { uid } }) => [[uid, "DESC"]],
+      orderBy: ({ uid }) => [[uid, "DESC"]],
     });
 
-    expect(result.edges[0].id).toEqual(1);
-    expect(result.edges[8].id).toEqual(9);
+    expect(result.edges[0].node.id).toEqual(1);
+    expect(result.edges[8].node.id).toEqual(9);
   });
 
   it("loads records with multiple order by expressions", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const result = await loader.load({
-      orderBy: ({ node: { uid, value } }) => [
+      orderBy: ({ uid, value }) => [
         [value, "DESC"],
         [uid, "DESC"],
       ],
     });
 
-    expect(result.edges[0].id).toEqual(9);
-    expect(result.edges[8].id).toEqual(2);
+    expect(result.edges[0].node.id).toEqual(9);
+    expect(result.edges[8].node.id).toEqual(2);
   });
 
   it("loads records with complex order by expression", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const result = await loader.load({
-      orderBy: ({ node: { uid } }) => [[sql`upper(${uid})`, "ASC"]],
+      orderBy: ({ uid }) => [[sql`upper(${uid})`, "ASC"]],
     });
 
-    expect(result.edges[0].id).toEqual(9);
-    expect(result.edges[8].id).toEqual(1);
+    expect(result.edges[0].node.id).toEqual(9);
+    expect(result.edges[8].node.id).toEqual(1);
   });
 
   it("loads records with where expression", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const result = await loader.load({
-      where: ({ node: { value } }) => sql`upper(${value}) = 'EEE'`,
+      where: ({ value }) => sql`upper(${value}) = 'EEE'`,
     });
 
     expect(result.edges).toHaveLength(1);
-    expect(result.edges[0].id).toEqual(9);
+    expect(result.edges[0].node.id).toEqual(9);
   });
 
   it("paginates through the records forwards", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const firstResult = await loader.load({
-      orderBy: ({ node: { uid } }) => [[uid, "ASC"]],
+      orderBy: ({ uid }) => [[uid, "ASC"]],
       limit: 4,
     });
 
     expect(firstResult.edges).toHaveLength(4);
-    expect(firstResult.edges[0].id).toEqual(9);
-    expect(firstResult.edges[3].id).toEqual(6);
+    expect(firstResult.edges[0].node.id).toEqual(9);
+    expect(firstResult.edges[3].node.id).toEqual(6);
     expect(firstResult.pageInfo).toMatchObject({
       hasPreviousPage: false,
       hasNextPage: true,
     });
 
     const secondResult = await loader.load({
-      orderBy: ({ node: { uid } }) => [[uid, "ASC"]],
+      orderBy: ({ uid }) => [[uid, "ASC"]],
       limit: 4,
       cursor: firstResult.pageInfo.endCursor,
     });
 
     expect(secondResult.edges).toHaveLength(4);
-    expect(secondResult.edges[0].id).toEqual(5);
-    expect(secondResult.edges[3].id).toEqual(2);
+    expect(secondResult.edges[0].node.id).toEqual(5);
+    expect(secondResult.edges[3].node.id).toEqual(2);
     expect(secondResult.pageInfo).toMatchObject({
       hasPreviousPage: true,
       hasNextPage: true,
     });
 
     const thirdResult = await loader.load({
-      orderBy: ({ node: { uid } }) => [[uid, "ASC"]],
+      orderBy: ({ uid }) => [[uid, "ASC"]],
       limit: 4,
       cursor: secondResult.pageInfo.endCursor,
     });
 
     expect(thirdResult.edges).toHaveLength(1);
-    expect(thirdResult.edges[0].id).toEqual(1);
+    expect(thirdResult.edges[0].node.id).toEqual(1);
     expect(thirdResult.pageInfo).toMatchObject({
       hasPreviousPage: true,
       hasNextPage: false,
     });
 
     const fourthResult = await loader.load({
-      orderBy: ({ node: { uid } }) => [[uid, "ASC"]],
+      orderBy: ({ uid }) => [[uid, "ASC"]],
       limit: 4,
       cursor: thirdResult.pageInfo.endCursor,
     });
@@ -211,7 +201,7 @@ describe("createConnectionLoaderClass", () => {
   it("paginates through the records backwards", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const firstResult = await loader.load({
-      orderBy: ({ node: { value, uid } }) => [
+      orderBy: ({ value, uid }) => [
         [value, "ASC"],
         [uid, "ASC"],
       ],
@@ -220,15 +210,15 @@ describe("createConnectionLoaderClass", () => {
     });
 
     expect(firstResult.edges).toHaveLength(4);
-    expect(firstResult.edges[0].id).toEqual(5);
-    expect(firstResult.edges[3].id).toEqual(9);
+    expect(firstResult.edges[0].node.id).toEqual(5);
+    expect(firstResult.edges[3].node.id).toEqual(9);
     expect(firstResult.pageInfo).toMatchObject({
       hasPreviousPage: true,
       hasNextPage: false,
     });
 
     const secondResult = await loader.load({
-      orderBy: ({ node: { value, uid } }) => [
+      orderBy: ({ value, uid }) => [
         [value, "ASC"],
         [uid, "ASC"],
       ],
@@ -238,15 +228,15 @@ describe("createConnectionLoaderClass", () => {
     });
 
     expect(secondResult.edges).toHaveLength(4);
-    expect(secondResult.edges[0].id).toEqual(1);
-    expect(secondResult.edges[3].id).toEqual(6);
+    expect(secondResult.edges[0].node.id).toEqual(1);
+    expect(secondResult.edges[3].node.id).toEqual(6);
     expect(secondResult.pageInfo).toMatchObject({
       hasPreviousPage: true,
       hasNextPage: true,
     });
 
     const thirdResult = await loader.load({
-      orderBy: ({ node: { value, uid } }) => [
+      orderBy: ({ value, uid }) => [
         [value, "ASC"],
         [uid, "ASC"],
       ],
@@ -256,14 +246,14 @@ describe("createConnectionLoaderClass", () => {
     });
 
     expect(thirdResult.edges).toHaveLength(1);
-    expect(thirdResult.edges[0].id).toEqual(2);
+    expect(thirdResult.edges[0].node.id).toEqual(2);
     expect(thirdResult.pageInfo).toMatchObject({
       hasPreviousPage: false,
       hasNextPage: true,
     });
 
     const fourthResult = await loader.load({
-      orderBy: ({ node: { value, uid } }) => [
+      orderBy: ({ value, uid }) => [
         [value, "ASC"],
         [uid, "ASC"],
       ],
@@ -279,43 +269,42 @@ describe("createConnectionLoaderClass", () => {
     });
   });
 
-  it("batches and caches loaded records", async () => {
+  it("batches loaded records", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const poolAnySpy = jest.spyOn(pool, "any");
+    poolAnySpy.mockClear();
     const results = await Promise.all([
       loader.load({
-        orderBy: ({ node: { uid } }) => [[uid, "ASC"]],
+        orderBy: ({ uid }) => [[uid, "ASC"]],
       }),
       loader.load({
-        orderBy: ({ node: { uid } }) => [[uid, "DESC"]],
+        orderBy: ({ uid }) => [[uid, "DESC"]],
       }),
     ]);
 
-    expect(poolAnySpy).toHaveBeenCalledTimes(1);
-    expect(results[0].edges[0].id).toEqual(9);
-    expect(results[0].edges[8].id).toEqual(1);
-    expect(results[1].edges[0].id).toEqual(1);
-    expect(results[1].edges[8].id).toEqual(9);
+    expect(poolAnySpy).toHaveBeenCalledTimes(2);
+    expect(results[0].edges[0].node.id).toEqual(9);
+    expect(results[0].edges[8].node.id).toEqual(1);
+    expect(results[1].edges[0].node.id).toEqual(1);
+    expect(results[1].edges[8].node.id).toEqual(9);
   });
 
-  it("batches calls with varying numbers of order by expressions", async () => {
+  it("caches loaded records", async () => {
     const loader = new BarConnectionLoader(pool, {});
-    const results = await Promise.all([
-      loader.load({
-        orderBy: ({ node: { uid, id } }) => [
-          [uid, "ASC"],
-          [id, "DESC"],
-        ],
-      }),
-      loader.load({
-        orderBy: ({ node: { uid } }) => [[uid, "DESC"]],
-      }),
-    ]);
+    const poolAnySpy = jest.spyOn(pool, "any");
+    poolAnySpy.mockClear();
+    const resultsA = await loader.load({
+      orderBy: ({ uid }) => [[uid, "ASC"]],
+    });
+    const resultsB = await loader.load({
+      orderBy: ({ uid }) => [[uid, "ASC"]],
+    });
 
-    expect(results[0].edges[0].id).toEqual(9);
-    expect(results[0].edges[8].id).toEqual(1);
-    expect(results[1].edges[0].id).toEqual(1);
-    expect(results[1].edges[8].id).toEqual(9);
+    expect(poolAnySpy).toHaveBeenCalledTimes(2);
+    expect(resultsA.edges[0].node.id).toEqual(9);
+    expect(resultsA.edges[8].node.id).toEqual(1);
+    expect(resultsB.edges[0].node.id).toEqual(9);
+    expect(resultsB.edges[8].node.id).toEqual(1);
   });
 
   it("gets the count", async () => {
@@ -323,11 +312,11 @@ describe("createConnectionLoaderClass", () => {
     const results = await Promise.all([
       loader.load({
         info: getInfo(["edges", "count"]),
-        where: ({ node: { value } }) => sql`upper(${value}) = 'CCC'`,
+        where: ({ value }) => sql`upper(${value}) = 'CCC'`,
       }),
       loader.load({
         info: getInfo(["edges", "count"]),
-        where: ({ node: { value } }) => sql`upper(${value}) = 'EEE'`,
+        where: ({ value }) => sql`upper(${value}) = 'EEE'`,
       }),
     ]);
 
@@ -340,11 +329,11 @@ describe("createConnectionLoaderClass", () => {
     const results = await Promise.all([
       loader.load({
         info: getInfo(["count"]),
-        where: ({ node: { value } }) => sql`upper(${value}) = 'CCC'`,
+        where: ({ value }) => sql`upper(${value}) = 'CCC'`,
       }),
       loader.load({
         info: getInfo(["count"]),
-        where: ({ node: { value } }) => sql`upper(${value}) = 'EEE'`,
+        where: ({ value }) => sql`upper(${value}) = 'EEE'`,
       }),
     ]);
 
@@ -359,11 +348,11 @@ describe("createConnectionLoaderClass", () => {
     const results = await Promise.all([
       loader.load({
         info: getInfo(["edges"]),
-        where: ({ node: { value } }) => sql`upper(${value}) = 'CCC'`,
+        where: ({ value }) => sql`upper(${value}) = 'CCC'`,
       }),
       loader.load({
         info: getInfo(["pageInfo"]),
-        where: ({ node: { value } }) => sql`upper(${value}) = 'EEE'`,
+        where: ({ value }) => sql`upper(${value}) = 'EEE'`,
       }),
     ]);
 
@@ -371,31 +360,5 @@ describe("createConnectionLoaderClass", () => {
     expect(results[0].edges.length).toEqual(2);
     expect(results[1].count).toEqual(0);
     expect(results[1].edges.length).toEqual(1);
-  });
-
-  it("loads records based on context", async () => {
-    const BarConnectionWithContextLoader = createConnectionLoaderClass<
-      { node: keyof Bar },
-      { id: number },
-      { favoriteId: number }
-    >({
-      tables: {
-        node: "test_table_bar",
-      },
-      queryFactory: ({ limit, orderBy, select, where }, { favoriteId }) => sql`
-        SELECT
-          ${select},
-          id
-        FROM test_table_bar
-        WHERE ${where} AND id = ${favoriteId}
-        ORDER BY ${orderBy}
-        LIMIT ${limit}
-      `,
-    });
-    const loader = new BarConnectionWithContextLoader(pool, { favoriteId: 2 });
-    const results = await loader.load({});
-
-    expect(results.edges).toHaveLength(1);
-    expect(results.edges[0].id).toEqual(2);
   });
 });
