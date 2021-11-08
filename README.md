@@ -48,7 +48,7 @@ const UserConnectionLoader = createConnectionLoaderClass<User>({
   `,
 });
 const pool = createPool("postgresql://");
-const loader = new UserByIdLoader(pool);
+const loader = new UserConnectionLoader(pool);
 const connection = await loader.load({
   where: ({ firstName }) => sql`${firstName} = 'Susan'`,
   orderBy: ({ firstName }) => [[firstName, "ASC"]],
