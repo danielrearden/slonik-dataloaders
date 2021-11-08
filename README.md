@@ -43,7 +43,7 @@ Example usage
 
 ```ts
 const UserConnectionLoader = createConnectionLoaderClass<User>({
-  queryFactory: sql`
+  query: sql`
     SELECT
       *
     FROM user
@@ -63,7 +63,7 @@ Usage example with forward pagination:
 
 ```ts
 const connection = await loader.load({
-  orderBy: ({ node: { firstName } }) => [[firstName, "ASC"]],
+  orderBy: ({ firstName }) => [[firstName, "ASC"]],
   limit: first,
   cursor: after,
 });
@@ -73,7 +73,7 @@ Usage example with backward pagination:
 
 ```ts
 const connection = await loader.load({
-  orderBy: ({ node: { firstName } }) => [[firstName, "ASC"]],
+  orderBy: ({ firstName }) => [[firstName, "ASC"]],
   limit: last,
   cursor: before,
   reverse: true,
@@ -86,7 +86,7 @@ In addition to the standard `edges` and `pageInfo` fields, each connection retur
 
 ```ts
 const connection = await loader.load({
-  orderBy: ({ node: { firstName } }) => [[firstName, "ASC"]],
+  orderBy: ({ firstName }) => [[firstName, "ASC"]],
   limit: first,
   cursor: after,
   info,
@@ -101,7 +101,7 @@ It's possible to request columns that will be exposed as fields on the edge type
 const UserConnectionLoader = createConnectionLoaderClass<
   User & { edgeCreatedAt }
 >({
-  queryFactory: sql`
+  query: sql`
     SELECT
       user.id,
       user.name,
