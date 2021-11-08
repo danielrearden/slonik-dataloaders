@@ -12,7 +12,6 @@ const UserByIdLoader = createNodeByIdLoaderClass<User>({
     SELECT
       *
     FROM user
-    WHERE ${where}
   `,
 });
 const pool = createPool("postgresql://");
@@ -32,7 +31,6 @@ const UserByIdLoader = createNodeByIdLoaderClass<User>({
     SELECT
       *
     FROM user
-    WHERE ${where}
   `,
 });
 ```
