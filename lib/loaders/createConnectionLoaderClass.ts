@@ -33,7 +33,7 @@ const TABLE_ALIAS = "t1";
 
 export const createConnectionLoaderClass = <TResult>(config: {
   columnNameTransformer?: (column: string) => string;
-  query: TaggedTemplateLiteralInvocationType<unknown>;
+  query: TaggedTemplateLiteralInvocationType<TResult>;
 }) => {
   const { columnNameTransformer = snakeCase, query } = config;
   const columnIdentifiers = getColumnIdentifiers<TResult>(

@@ -20,7 +20,7 @@ export const createNodeByIdLoaderClass = <TRecord>(config: {
     type?: TypeNameIdentifierType | SqlTokenType;
   };
   columnNameTransformer?: ((column: string) => string) | undefined;
-  query: TaggedTemplateLiteralInvocationType<unknown>;
+  query: TaggedTemplateLiteralInvocationType<TRecord>;
 }) => {
   const {
     column: { name: columnName = "id", type: columnType = "int4" } = {},

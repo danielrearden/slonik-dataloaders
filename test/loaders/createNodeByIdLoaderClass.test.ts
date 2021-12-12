@@ -8,8 +8,8 @@ type Foo = {
   uid: string;
 };
 
-const FooByIdLoader = createNodeByIdLoaderClass<Foo>({
-  query: sql`
+const FooByIdLoader = createNodeByIdLoaderClass({
+  query: sql<Foo>`
     SELECT
       *
     FROM test_table_foo

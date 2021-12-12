@@ -29,8 +29,8 @@ const getInfo = (
   };
 };
 
-const BarConnectionLoader = createConnectionLoaderClass<Bar>({
-  query: sql`
+const BarConnectionLoader = createConnectionLoaderClass({
+  query: sql<Bar>`
     SELECT
       *
     FROM test_table_bar
