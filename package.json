@@ -36,6 +36,6 @@
     "snake-case": "^3.0.4"
   },
   "peerDependencies": {
-    "slonik": "^23.5.3"
+    "slonik": ">=23.0.0"
   }
 }
