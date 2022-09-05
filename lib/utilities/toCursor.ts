@@ -1,5 +1,5 @@
-import { QueryResultRowColumnType } from "slonik";
+import { QueryResultRowColumn } from "slonik";
 
-export const toCursor = (ids: QueryResultRowColumnType[]): string => {
+export const toCursor = (ids: QueryResultRowColumn[]): string => {
   return Buffer.from(JSON.stringify(ids)).toString("base64");
 };

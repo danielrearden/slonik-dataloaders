@@ -1,10 +1,10 @@
 import DataLoader from "dataloader";
 import { GraphQLResolveInfo } from "graphql";
 import {
-  CommonQueryMethodsType,
+  CommonQueryMethods,
   sql,
-  SqlTokenType,
-  TaggedTemplateLiteralInvocationType,
+  SqlToken,
+  TaggedTemplateLiteralInvocation,
 } from "slonik";
 import { snakeCase } from "snake-case";
 import { ColumnIdentifiers, Connection, OrderDirection } from "../types";
@@ -21,19 +21,19 @@ export type DataLoaderKey<TResult> = {
   reverse?: boolean;
   orderBy?: (
     identifiers: ColumnIdentifiers<TResult>
-  ) => [SqlTokenType, OrderDirection][];
+  ) => [SqlToken, OrderDirection][];
   where?: (
     identifiers: ColumnIdentifiers<TResult>
-  ) => TaggedTemplateLiteralInvocationType<unknown>;
+  ) => TaggedTemplateLiteralInvocation<any>;
   info?: Pick<GraphQLResolveInfo, "fieldNodes" | "fragments">;
 };
 
 const SORT_COLUMN_ALIAS = "s1";
 const TABLE_ALIAS = "t1";
 
-export const createConnectionLoaderClass = <TResult>(config: {
+export const createConnectionLoaderClass = <TResult extends Record<string, any>>(config: {
   columnNameTransformer?: (column: string) => string;
-  query: TaggedTemplateLiteralInvocationType<TResult>;
+  query: TaggedTemplateLiteralInvocation<TResult>;
 }) => {
   const { columnNameTransformer = snakeCase, query } = config;
   const columnIdentifiers = getColumnIdentifiers<TResult>(
@@ -47,7 +47,7 @@ export const createConnectionLoaderClass = <TResult>(config: {
     string
   > {
     constructor(
-      pool: CommonQueryMethodsType,
+      pool: CommonQueryMethods,
       dataLoaderOptions?: DataLoader.Options<
         DataLoaderKey<TResult>,
         Connection<TResult>,
@@ -56,8 +56,8 @@ export const createConnectionLoaderClass = <TResult>(config: {
     ) {
       super(
         async (loaderKeys) => {
-          const edgesQueries: TaggedTemplateLiteralInvocationType<unknown>[] = [];
-          const countQueries: TaggedTemplateLiteralInvocationType<unknown>[] = [];
+          const edgesQueries: TaggedTemplateLiteralInvocation<any>[] = [];
+          const countQueries: TaggedTemplateLiteralInvocation<any>[] = [];
 
           loaderKeys.forEach((loaderKey, index) => {
             const {
@@ -74,7 +74,7 @@ export const createConnectionLoaderClass = <TResult>(config: {
               ? getRequestedFields(info)
               : new Set(["pageInfo", "edges", "count"]);
 
-            const conditions: SqlTokenType[] = where
+            const conditions: SqlToken[] = where
               ? [sql`(${where(columnIdentifiers)})`]
               : [];
             const queryKey = String(index);
@@ -106,7 +106,7 @@ export const createConnectionLoaderClass = <TResult>(config: {
               requestedFields.has("edges")
             ) {
               const orderByExpressions: [
-                SqlTokenType,
+                SqlToken,
                 OrderDirection
               ][] = orderBy ? orderBy(columnIdentifiers) : [];
 

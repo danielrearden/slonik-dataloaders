@@ -3,24 +3,22 @@ import { snakeCase } from "snake-case";
 
 import {
   sql,
-  CommonQueryMethodsType,
-  TaggedTemplateLiteralInvocationType,
-  SqlTokenType,
+  CommonQueryMethods,
+  TaggedTemplateLiteralInvocation,
+  SqlToken,
+  TypeNameIdentifier,
+  PrimitiveValueExpression,
 } from "slonik";
-import {
-  PrimitiveValueExpressionType,
-  TypeNameIdentifierType,
-} from "slonik/dist/types";
 
 const TABLE_ALIAS = "t1";
 
-export const createNodeByIdLoaderClass = <TRecord>(config: {
+export const createNodeByIdLoaderClass = <TRecord extends Record<string, any>>(config: {
   column?: {
     name?: Extract<keyof TRecord, string> | undefined;
-    type?: TypeNameIdentifierType | SqlTokenType;
+    type?: TypeNameIdentifier | SqlToken;
   };
   columnNameTransformer?: ((column: string) => string) | undefined;
-  query: TaggedTemplateLiteralInvocationType<TRecord>;
+  query: TaggedTemplateLiteralInvocation<TRecord>;
 }) => {
   const {
     column: { name: columnName = "id", type: columnType = "int4" } = {},
@@ -29,14 +27,14 @@ export const createNodeByIdLoaderClass = <TRecord>(config: {
   } = config;
 
   return class NodeLoader extends DataLoader<
-    PrimitiveValueExpressionType,
+  PrimitiveValueExpression,
     TRecord & { __typename?: string },
     string
   > {
     constructor(
-      pool: CommonQueryMethodsType,
+      pool: CommonQueryMethods,
       loaderOptions?: DataLoader.Options<
-        PrimitiveValueExpressionType,
+      PrimitiveValueExpression,
         TRecord & { __typename?: string },
         string
       >
@@ -47,6 +45,7 @@ export const createNodeByIdLoaderClass = <TRecord>(config: {
             TABLE_ALIAS,
             columnNameTransformer(columnName),
           ])} = ANY(${sql.array(loaderKeys, columnType)})`;
+
           const records = await pool.any<any>(
             sql`
               SELECT *
