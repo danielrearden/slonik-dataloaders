@@ -12,7 +12,9 @@ import {
 
 const TABLE_ALIAS = "t1";
 
-export const createNodeByIdLoaderClass = <TRecord extends Record<string, any>>(config: {
+export const createNodeByIdLoaderClass = <
+  TRecord extends Record<string, any>
+>(config: {
   column?: {
     name?: Extract<keyof TRecord, string> | undefined;
     type?: TypeNameIdentifier | SqlToken;
@@ -27,14 +29,14 @@ export const createNodeByIdLoaderClass = <TRecord extends Record<string, any>>(c
   } = config;
 
   return class NodeLoader extends DataLoader<
-  PrimitiveValueExpression,
+    PrimitiveValueExpression,
     TRecord & { __typename?: string },
     string
   > {
     constructor(
       pool: CommonQueryMethods,
       loaderOptions?: DataLoader.Options<
-      PrimitiveValueExpression,
+        PrimitiveValueExpression,
         TRecord & { __typename?: string },
         string
       >
@@ -46,8 +48,10 @@ export const createNodeByIdLoaderClass = <TRecord extends Record<string, any>>(c
             columnNameTransformer(columnName),
           ])} = ANY(${sql.array(loaderKeys, columnType)})`;
 
+          const sqlTag = query.parser ? sql.type(query.parser) : sql;
+
           const records = await pool.any<any>(
-            sql`
+            sqlTag`
               SELECT *
               FROM (
                 ${query}

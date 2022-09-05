@@ -92,9 +92,9 @@ describe("createConnectionLoaderClass", () => {
 
   it("loads records in ascending order", async () => {
     const loader = new BarConnectionLoader(pool, {});
-    const result = await loader.load({
+    const result = (await loader.load({
       orderBy: ({ uid }) => [[uid, "ASC"]],
-    }) as any;
+    })) as any;
 
     expect(result.edges[0].node.id).toEqual(9);
     expect(result.edges[8].node.id).toEqual(1);
