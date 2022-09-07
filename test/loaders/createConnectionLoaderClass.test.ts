@@ -4,7 +4,7 @@ import {
   OperationDefinitionNode,
   parse,
 } from "graphql";
-import { createPool, DatabasePoolType, sql } from "slonik";
+import { createPool, DatabasePool, sql } from "slonik";
 // @ts-ignore
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import { createConnectionLoaderClass } from "../../lib";
@@ -38,10 +38,10 @@ const BarConnectionLoader = createConnectionLoaderClass({
 });
 
 describe("createConnectionLoaderClass", () => {
-  let pool: DatabasePoolType;
+  let pool: DatabasePool;
 
   beforeAll(async () => {
-    pool = createPool(process.env.POSTGRES_DSN || "", {
+    pool = await createPool(process.env.POSTGRES_DSN || "", {
       interceptors: [createQueryLoggingInterceptor()],
     });
 
@@ -92,9 +92,9 @@ describe("createConnectionLoaderClass", () => {
 
   it("loads records in ascending order", async () => {
     const loader = new BarConnectionLoader(pool, {});
-    const result = await loader.load({
+    const result = (await loader.load({
       orderBy: ({ uid }) => [[uid, "ASC"]],
-    });
+    })) as any;
 
     expect(result.edges[0].node.id).toEqual(9);
     expect(result.edges[8].node.id).toEqual(1);

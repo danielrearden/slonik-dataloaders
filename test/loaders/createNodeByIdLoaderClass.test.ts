@@ -1,4 +1,4 @@
-import { createPool, DatabasePoolType, sql } from "slonik";
+import { createPool, DatabasePool, sql } from "slonik";
 // @ts-ignore
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import { createNodeByIdLoaderClass } from "../../lib";
@@ -17,10 +17,10 @@ const FooByIdLoader = createNodeByIdLoaderClass({
 });
 
 describe("createRecordByUniqueColumnLoader", () => {
-  let pool: DatabasePoolType;
+  let pool: DatabasePool;
 
   beforeAll(async () => {
-    pool = createPool(process.env.POSTGRES_DSN || "", {
+    pool = await createPool(process.env.POSTGRES_DSN || "", {
       interceptors: [createQueryLoggingInterceptor()],
     });
 

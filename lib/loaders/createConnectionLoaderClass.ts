@@ -1,11 +1,12 @@
 import DataLoader from "dataloader";
 import { GraphQLResolveInfo } from "graphql";
 import {
-  CommonQueryMethodsType,
+  CommonQueryMethods,
   sql,
-  SqlTokenType,
-  TaggedTemplateLiteralInvocationType,
+  SqlToken,
+  TaggedTemplateLiteralInvocation,
 } from "slonik";
+import { z, AnyZodObject } from "zod";
 import { snakeCase } from "snake-case";
 import { ColumnIdentifiers, Connection, OrderDirection } from "../types";
 import {
@@ -21,19 +22,21 @@ export type DataLoaderKey<TResult> = {
   reverse?: boolean;
   orderBy?: (
     identifiers: ColumnIdentifiers<TResult>
-  ) => [SqlTokenType, OrderDirection][];
+  ) => [SqlToken, OrderDirection][];
   where?: (
     identifiers: ColumnIdentifiers<TResult>
-  ) => TaggedTemplateLiteralInvocationType<unknown>;
+  ) => TaggedTemplateLiteralInvocation<any>;
   info?: Pick<GraphQLResolveInfo, "fieldNodes" | "fragments">;
 };
 
 const SORT_COLUMN_ALIAS = "s1";
 const TABLE_ALIAS = "t1";
 
-export const createConnectionLoaderClass = <TResult>(config: {
+export const createConnectionLoaderClass = <
+  TResult extends Record<string, any>
+>(config: {
   columnNameTransformer?: (column: string) => string;
-  query: TaggedTemplateLiteralInvocationType<TResult>;
+  query: TaggedTemplateLiteralInvocation<TResult>;
 }) => {
   const { columnNameTransformer = snakeCase, query } = config;
   const columnIdentifiers = getColumnIdentifiers<TResult>(
@@ -47,7 +50,7 @@ export const createConnectionLoaderClass = <TResult>(config: {
     string
   > {
     constructor(
-      pool: CommonQueryMethodsType,
+      pool: CommonQueryMethods,
       dataLoaderOptions?: DataLoader.Options<
         DataLoaderKey<TResult>,
         Connection<TResult>,
@@ -56,8 +59,8 @@ export const createConnectionLoaderClass = <TResult>(config: {
     ) {
       super(
         async (loaderKeys) => {
-          const edgesQueries: TaggedTemplateLiteralInvocationType<unknown>[] = [];
-          const countQueries: TaggedTemplateLiteralInvocationType<unknown>[] = [];
+          const edgesQueries: TaggedTemplateLiteralInvocation<any>[] = [];
+          const countQueries: TaggedTemplateLiteralInvocation<any>[] = [];
 
           loaderKeys.forEach((loaderKey, index) => {
             const {
@@ -74,7 +77,7 @@ export const createConnectionLoaderClass = <TResult>(config: {
               ? getRequestedFields(info)
               : new Set(["pageInfo", "edges", "count"]);
 
-            const conditions: SqlTokenType[] = where
+            const conditions: SqlToken[] = where
               ? [sql`(${where(columnIdentifiers)})`]
               : [];
             const queryKey = String(index);
@@ -105,10 +108,9 @@ export const createConnectionLoaderClass = <TResult>(config: {
               requestedFields.has("pageInfo") ||
               requestedFields.has("edges")
             ) {
-              const orderByExpressions: [
-                SqlTokenType,
-                OrderDirection
-              ][] = orderBy ? orderBy(columnIdentifiers) : [];
+              const orderByExpressions: [SqlToken, OrderDirection][] = orderBy
+                ? orderBy(columnIdentifiers)
+                : [];
 
               selectExpressions.push(
                 sql`${sql.identifier([TABLE_ALIAS])}.*`,
@@ -187,9 +189,22 @@ export const createConnectionLoaderClass = <TResult>(config: {
             }
           });
 
+          let extendedParser;
+
+          if (query.parser) {
+            const parser = query.parser as unknown as AnyZodObject;
+
+            extendedParser = parser.extend({
+              key: z.union([z.string(), z.number()]),
+              s1: z.array(z.union([z.string(), z.number()])),
+            });
+          }
+
+          const sqlTag = extendedParser ? sql.type(extendedParser) : sql;
+
           const [edgesRecords, countRecords] = await Promise.all([
             edgesQueries.length
-              ? pool.any<any>(sql`${sql.join(edgesQueries, sql`UNION ALL`)}`)
+              ? pool.any<any>(sqlTag`${sql.join(edgesQueries, sql`UNION ALL`)}`)
               : [],
             countQueries.length
               ? pool.any<any>(sql`${sql.join(countQueries, sql`UNION ALL`)}`)

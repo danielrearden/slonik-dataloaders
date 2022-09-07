@@ -1,10 +1,10 @@
-import { IdentifierSqlTokenType } from "slonik";
+import { IdentifierSqlToken } from "slonik";
 
 export type OrderDirection = "ASC" | "DESC";
 
 export type ColumnIdentifiers<TResult> = Record<
   keyof TResult,
-  IdentifierSqlTokenType
+  IdentifierSqlToken
 >;
 
 export interface PageInfo {
