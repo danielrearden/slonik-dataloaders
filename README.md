@@ -7,13 +7,14 @@
 Example usage:
 
 ```ts
-const UserByIdLoader = createNodeByIdLoaderClass<User>({
-  query: sql`
+const UserByIdLoader = createNodeByIdLoaderClass({
+  query: sql.type(User)`
     SELECT
       *
     FROM user
   `,
 });
+
 const pool = createPool("postgresql://");
 const loader = new UserByIdLoader(pool);
 const user = await loader.load(99);
@@ -22,12 +23,12 @@ const user = await loader.load(99);
 By default, the loader will look for an integer column named `id` to use as the key. You can specify a different column to use like this:
 
 ```ts
-const UserByIdLoader = createNodeByIdLoaderClass<User>({
+const UserByIdLoader = createNodeByIdLoaderClass({
   column: {
     name: 'unique_id',
     type: 'text',
   }
-  query: sql`
+  query: sql.type(User)`
     SELECT
       *
     FROM user
@@ -41,16 +42,17 @@ Example usage
 
 ```ts
 const UserConnectionLoader = createConnectionLoaderClass<User>({
-  query: sql`
+  query: sql.type(User)`
     SELECT
       *
     FROM user
   `,
 });
+
 const pool = createPool("postgresql://");
 const loader = new UserByIdLoader(pool);
 const connection = await loader.load({
-  where: ({ firstName }) => sql`${firstName} = 'Susan'`,
+  where: ({ firstName }) => sql.fragment`${firstName} = 'Susan'`,
   orderBy: ({ firstName }) => [[firstName, "ASC"]],
 });
 ```
@@ -99,7 +101,7 @@ It's possible to request columns that will be exposed as fields on the edge type
 const UserConnectionLoader = createConnectionLoaderClass<
   User & { edgeCreatedAt }
 >({
-  query: sql`
+  query: sql.unsafe`
     SELECT
       user.id,
       user.name,

@@ -1,26 +1,24 @@
 import DataLoader from "dataloader";
 import { snakeCase } from "snake-case";
-
 import {
   sql,
   CommonQueryMethods,
-  TaggedTemplateLiteralInvocation,
   SqlToken,
+  QuerySqlToken,
   TypeNameIdentifier,
   PrimitiveValueExpression,
 } from "slonik";
+import { z, type ZodTypeAny } from "zod";
 
 const TABLE_ALIAS = "t1";
 
-export const createNodeByIdLoaderClass = <
-  TRecord extends Record<string, any>
->(config: {
+export const createNodeByIdLoaderClass = <T extends ZodTypeAny>(config: {
   column?: {
-    name?: Extract<keyof TRecord, string> | undefined;
+    name?: Extract<keyof z.infer<T>, string> | undefined;
     type?: TypeNameIdentifier | SqlToken;
   };
   columnNameTransformer?: ((column: string) => string) | undefined;
-  query: TaggedTemplateLiteralInvocation<TRecord>;
+  query: QuerySqlToken<T>;
 }) => {
   const {
     column: { name: columnName = "id", type: columnType = "int4" } = {},
@@ -30,28 +28,26 @@ export const createNodeByIdLoaderClass = <
 
   return class NodeLoader extends DataLoader<
     PrimitiveValueExpression,
-    TRecord & { __typename?: string },
+    z.infer<T>,
     string
   > {
     constructor(
       pool: CommonQueryMethods,
       loaderOptions?: DataLoader.Options<
         PrimitiveValueExpression,
-        TRecord & { __typename?: string },
+        z.infer<T>,
         string
       >
     ) {
       super(
         async (loaderKeys) => {
-          const where = sql`${sql.identifier([
+          const where = sql.fragment`${sql.identifier([
             TABLE_ALIAS,
             columnNameTransformer(columnName),
           ])} = ANY(${sql.array(loaderKeys, columnType)})`;
 
-          const sqlTag = query.parser ? sql.type(query.parser) : sql;
-
           const records = await pool.any<any>(
-            sqlTag`
+            sql.type(query.parser)`
               SELECT *
               FROM (
                 ${query}

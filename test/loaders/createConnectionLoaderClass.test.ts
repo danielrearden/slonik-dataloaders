@@ -4,16 +4,10 @@ import {
   OperationDefinitionNode,
   parse,
 } from "graphql";
+import { z } from "zod";
 import { createPool, DatabasePool, sql } from "slonik";
-// @ts-ignore
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import { createConnectionLoaderClass } from "../../lib";
-
-type Bar = {
-  id: number;
-  uid: string;
-  value: string;
-};
 
 const getInfo = (
   fields: string[]
@@ -30,7 +24,13 @@ const getInfo = (
 };
 
 const BarConnectionLoader = createConnectionLoaderClass({
-  query: sql<Bar>`
+  query: sql.type(
+    z.object({
+      id: z.number(),
+      uid: z.string(),
+      value: z.string(),
+    })
+  )`
     SELECT
       *
     FROM test_table_bar
@@ -45,13 +45,15 @@ describe("createConnectionLoaderClass", () => {
       interceptors: [createQueryLoggingInterceptor()],
     });
 
-    await pool.query(sql`
+    await pool.query(sql.unsafe`
       CREATE TABLE IF NOT EXISTS test_table_bar (
         id integer NOT NULL PRIMARY KEY,
         uid text NOT NULL,
         value text NOT NULL
       );
+    `);
 
+    await pool.query(sql.unsafe`
       INSERT INTO test_table_bar
         (id, uid, value)
       VALUES
@@ -68,11 +70,13 @@ describe("createConnectionLoaderClass", () => {
   });
 
   afterAll(async () => {
-    await pool.query(sql`
-      DROP TABLE IF EXISTS test_table_bar;
-    `);
+    if (pool) {
+      await pool.query(sql.unsafe`
+        DROP TABLE IF EXISTS test_table_bar;
+      `);
 
-    await pool.end();
+      await pool.end();
+    }
   });
 
   it("loads all records with no additional options", async () => {
@@ -126,7 +130,7 @@ describe("createConnectionLoaderClass", () => {
   it("loads records with complex order by expression", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const result = await loader.load({
-      orderBy: ({ uid }) => [[sql`upper(${uid})`, "ASC"]],
+      orderBy: ({ uid }) => [[sql.fragment`upper(${uid})`, "ASC"]],
     });
 
     expect(result.edges[0].node.id).toEqual(9);
@@ -136,7 +140,7 @@ describe("createConnectionLoaderClass", () => {
   it("loads records with where expression", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const result = await loader.load({
-      where: ({ value }) => sql`upper(${value}) = 'EEE'`,
+      where: ({ value }) => sql.fragment`upper(${value}) = 'EEE'`,
     });
 
     expect(result.edges).toHaveLength(1);
@@ -312,11 +316,11 @@ describe("createConnectionLoaderClass", () => {
     const results = await Promise.all([
       loader.load({
         info: getInfo(["edges", "count"]),
-        where: ({ value }) => sql`upper(${value}) = 'CCC'`,
+        where: ({ value }) => sql.fragment`upper(${value}) = 'CCC'`,
       }),
       loader.load({
         info: getInfo(["edges", "count"]),
-        where: ({ value }) => sql`upper(${value}) = 'EEE'`,
+        where: ({ value }) => sql.fragment`upper(${value}) = 'EEE'`,
       }),
     ]);
 
@@ -329,11 +333,11 @@ describe("createConnectionLoaderClass", () => {
     const results = await Promise.all([
       loader.load({
         info: getInfo(["count"]),
-        where: ({ value }) => sql`upper(${value}) = 'CCC'`,
+        where: ({ value }) => sql.fragment`upper(${value}) = 'CCC'`,
       }),
       loader.load({
         info: getInfo(["count"]),
-        where: ({ value }) => sql`upper(${value}) = 'EEE'`,
+        where: ({ value }) => sql.fragment`upper(${value}) = 'EEE'`,
       }),
     ]);
 
@@ -348,11 +352,11 @@ describe("createConnectionLoaderClass", () => {
     const results = await Promise.all([
       loader.load({
         info: getInfo(["edges"]),
-        where: ({ value }) => sql`upper(${value}) = 'CCC'`,
+        where: ({ value }) => sql.fragment`upper(${value}) = 'CCC'`,
       }),
       loader.load({
         info: getInfo(["pageInfo"]),
-        where: ({ value }) => sql`upper(${value}) = 'EEE'`,
+        where: ({ value }) => sql.fragment`upper(${value}) = 'EEE'`,
       }),
     ]);
 
