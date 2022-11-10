@@ -7,13 +7,14 @@
 Example usage:
 
 ```ts
-const UserByIdLoader = createNodeByIdLoaderClass<User>({
-  query: sql.unsafe`
+const UserByIdLoader = createNodeByIdLoaderClass({
+  query: sql.type(User)`
     SELECT
       *
     FROM user
   `,
 });
+
 const pool = createPool("postgresql://");
 const loader = new UserByIdLoader(pool);
 const user = await loader.load(99);
@@ -22,12 +23,12 @@ const user = await loader.load(99);
 By default, the loader will look for an integer column named `id` to use as the key. You can specify a different column to use like this:
 
 ```ts
-const UserByIdLoader = createNodeByIdLoaderClass<User>({
+const UserByIdLoader = createNodeByIdLoaderClass({
   column: {
     name: 'unique_id',
     type: 'text',
   }
-  query: sql.unsafe`
+  query: sql.type(User)`
     SELECT
       *
     FROM user
@@ -41,12 +42,13 @@ Example usage
 
 ```ts
 const UserConnectionLoader = createConnectionLoaderClass<User>({
-  query: sql.unsafe`
+  query: sql.type(User)`
     SELECT
       *
     FROM user
   `,
 });
+
 const pool = createPool("postgresql://");
 const loader = new UserByIdLoader(pool);
 const connection = await loader.load({

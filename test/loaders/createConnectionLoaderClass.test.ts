@@ -4,11 +4,10 @@ import {
   OperationDefinitionNode,
   parse,
 } from "graphql";
-import {z} from 'zod';
+import { z } from "zod";
 import { createPool, DatabasePool, sql } from "slonik";
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
 import { createConnectionLoaderClass } from "../../lib";
-
 
 const getInfo = (
   fields: string[]
@@ -30,7 +29,7 @@ const BarConnectionLoader = createConnectionLoaderClass({
       id: z.number(),
       uid: z.string(),
       value: z.string(),
-    }),
+    })
   )`
     SELECT
       *

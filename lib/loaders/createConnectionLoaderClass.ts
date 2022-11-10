@@ -1,11 +1,6 @@
 import DataLoader from "dataloader";
 import { GraphQLResolveInfo } from "graphql";
-import {
-  CommonQueryMethods,
-  sql,
-  QuerySqlToken,
-  SqlToken,
-} from "slonik";
+import { CommonQueryMethods, sql, QuerySqlToken, SqlToken } from "slonik";
 import { z, AnyZodObject, ZodTypeAny } from "zod";
 import { snakeCase } from "snake-case";
 import { ColumnIdentifiers, Connection, OrderDirection } from "../types";
@@ -23,37 +18,33 @@ export type DataLoaderKey<TResult> = {
   orderBy?: (
     identifiers: ColumnIdentifiers<TResult>
   ) => [SqlToken, OrderDirection][];
-  where?: (
-    identifiers: ColumnIdentifiers<TResult>
-  ) => SqlToken;
+  where?: (identifiers: ColumnIdentifiers<TResult>) => SqlToken;
   info?: Pick<GraphQLResolveInfo, "fieldNodes" | "fragments">;
 };
 
 const SORT_COLUMN_ALIAS = "s1";
 const TABLE_ALIAS = "t1";
 
-export const createConnectionLoaderClass = <
-  TResult extends Record<string, any>
->(config: {
+export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
   columnNameTransformer?: (column: string) => string;
-  query: QuerySqlToken;
+  query: QuerySqlToken<T>;
 }) => {
   const { columnNameTransformer = snakeCase, query } = config;
-  const columnIdentifiers = getColumnIdentifiers<TResult>(
+  const columnIdentifiers = getColumnIdentifiers<z.infer<T>>(
     TABLE_ALIAS,
     columnNameTransformer
   );
 
   return class ConnectionLoaderClass extends DataLoader<
-    DataLoaderKey<TResult>,
-    Connection<TResult>,
+    DataLoaderKey<z.infer<T>>,
+    Connection<z.infer<T>>,
     string
   > {
     constructor(
       pool: CommonQueryMethods,
       dataLoaderOptions?: DataLoader.Options<
-        DataLoaderKey<TResult>,
-        Connection<TResult>,
+        DataLoaderKey<z.infer<T>>,
+        Connection<z.infer<T>>,
         string
       >
     ) {
@@ -97,7 +88,10 @@ export const createConnectionLoaderClass = <
                   ) ${sql.identifier([TABLE_ALIAS])}
                   WHERE ${
                     conditions.length
-                      ? sql.fragment`${sql.join(conditions, sql.fragment` AND `)}`
+                      ? sql.fragment`${sql.join(
+                          conditions,
+                          sql.fragment` AND `
+                        )}`
                       : sql.fragment`TRUE`
                   }
                 )`
@@ -189,25 +183,26 @@ export const createConnectionLoaderClass = <
             }
           });
 
-          let extendedParser;
+          const parser = query.parser as unknown as AnyZodObject;
 
-          if (query.parser) {
-            const parser = query.parser as unknown as AnyZodObject;
-
-            extendedParser = parser.extend({
-              key: z.union([z.string(), z.number()]),
-              s1: z.array(z.union([z.string(), z.number()])),
-            }) as ZodTypeAny;
-          }
-
-          const sqlTag = extendedParser ? sql.type(extendedParser) : sql.unsafe;
+          const extendedParser = parser.extend({
+            key: z.union([z.string(), z.number()]),
+            s1: z.array(z.union([z.string(), z.number()])),
+          }) as ZodTypeAny;
 
           const [edgesRecords, countRecords] = await Promise.all([
             edgesQueries.length
-              ? pool.any(sqlTag`${sql.join(edgesQueries, sql.fragment`UNION ALL`)}`)
+              ? pool.any(
+                  sql.type(extendedParser)`${sql.join(
+                    edgesQueries,
+                    sql.fragment`UNION ALL`
+                  )}`
+                )
               : [],
             countQueries.length
-              ? pool.any(sql.unsafe`${sql.join(countQueries, sql.fragment`UNION ALL`)}`)
+              ? pool.any(
+                  sql.unsafe`${sql.join(countQueries, sql.fragment`UNION ALL`)}`
+                )
               : [],
           ]);
 

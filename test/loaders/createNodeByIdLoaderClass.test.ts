@@ -83,10 +83,12 @@ describe("createRecordByUniqueColumnLoader", () => {
         name: "uid",
         type: "text",
       },
-      query: sql.type(z.object({
-        id: z.number(),
-        uid: z.string(),
-      }))`
+      query: sql.type(
+        z.object({
+          id: z.number(),
+          uid: z.string(),
+        })
+      )`
         SELECT
           *
         FROM test_table_foo
