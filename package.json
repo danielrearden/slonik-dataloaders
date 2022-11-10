@@ -7,7 +7,7 @@
     "dist"
   ],
   "scripts": {
-    "prepublishOnly": "rimraf dist && tsc",
+    "build": "rimraf dist && tsc",
     "test": "jest",
     "lint": "prettier --check ."
   },
