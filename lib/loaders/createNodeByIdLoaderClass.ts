@@ -4,8 +4,8 @@ import { snakeCase } from "snake-case";
 import {
   sql,
   CommonQueryMethods,
-  TaggedTemplateLiteralInvocation,
   SqlToken,
+  QuerySqlToken,
   TypeNameIdentifier,
   PrimitiveValueExpression,
 } from "slonik";
@@ -20,7 +20,7 @@ export const createNodeByIdLoaderClass = <
     type?: TypeNameIdentifier | SqlToken;
   };
   columnNameTransformer?: ((column: string) => string) | undefined;
-  query: TaggedTemplateLiteralInvocation<TRecord>;
+  query: QuerySqlToken;
 }) => {
   const {
     column: { name: columnName = "id", type: columnType = "int4" } = {},
@@ -43,12 +43,12 @@ export const createNodeByIdLoaderClass = <
     ) {
       super(
         async (loaderKeys) => {
-          const where = sql`${sql.identifier([
+          const where = sql.fragment`${sql.identifier([
             TABLE_ALIAS,
             columnNameTransformer(columnName),
           ])} = ANY(${sql.array(loaderKeys, columnType)})`;
 
-          const sqlTag = query.parser ? sql.type(query.parser) : sql;
+          const sqlTag = query.parser ? sql.type(query.parser) : sql.unsafe;
 
           const records = await pool.any<any>(
             sqlTag`

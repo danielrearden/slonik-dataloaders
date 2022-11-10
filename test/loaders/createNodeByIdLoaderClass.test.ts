@@ -1,15 +1,15 @@
 import { createPool, DatabasePool, sql } from "slonik";
-// @ts-ignore
 import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
+import { z } from "zod";
 import { createNodeByIdLoaderClass } from "../../lib";
 
-type Foo = {
-  id: number;
-  uid: string;
-};
-
 const FooByIdLoader = createNodeByIdLoaderClass({
-  query: sql<Foo>`
+  query: sql.type(
+    z.object({
+      id: z.number(),
+      uid: z.string(),
+    })
+  )`
     SELECT
       *
     FROM test_table_foo
@@ -24,12 +24,14 @@ describe("createRecordByUniqueColumnLoader", () => {
       interceptors: [createQueryLoggingInterceptor()],
     });
 
-    await pool.query(sql`
+    await pool.query(sql.unsafe`
       CREATE TABLE IF NOT EXISTS test_table_foo (
         id integer NOT NULL PRIMARY KEY,
         uid text NOT NULL
       );
+    `);
 
+    await pool.query(sql.unsafe`
       INSERT INTO test_table_foo
         (id, uid)
       VALUES
@@ -40,11 +42,13 @@ describe("createRecordByUniqueColumnLoader", () => {
   });
 
   afterAll(async () => {
-    await pool.query(sql`
-      DROP TABLE IF EXISTS test_table_foo;
-    `);
+    if (pool) {
+      await pool.query(sql.unsafe`
+        DROP TABLE IF EXISTS test_table_foo;
+      `);
 
-    await pool.end();
+      await pool.end();
+    }
   });
 
   it("loads record by numeric column", async () => {
@@ -74,12 +78,15 @@ describe("createRecordByUniqueColumnLoader", () => {
   });
 
   it("loads record by text column", async () => {
-    const FooByUidLoader = createNodeByIdLoaderClass<Foo>({
+    const FooByUidLoader = createNodeByIdLoaderClass({
       column: {
         name: "uid",
         type: "text",
       },
-      query: sql`
+      query: sql.type(z.object({
+        id: z.number(),
+        uid: z.string(),
+      }))`
         SELECT
           *
         FROM test_table_foo

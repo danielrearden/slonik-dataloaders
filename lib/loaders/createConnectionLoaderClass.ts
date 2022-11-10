@@ -3,10 +3,10 @@ import { GraphQLResolveInfo } from "graphql";
 import {
   CommonQueryMethods,
   sql,
+  QuerySqlToken,
   SqlToken,
-  TaggedTemplateLiteralInvocation,
 } from "slonik";
-import { z, AnyZodObject } from "zod";
+import { z, AnyZodObject, ZodTypeAny } from "zod";
 import { snakeCase } from "snake-case";
 import { ColumnIdentifiers, Connection, OrderDirection } from "../types";
 import {
@@ -25,7 +25,7 @@ export type DataLoaderKey<TResult> = {
   ) => [SqlToken, OrderDirection][];
   where?: (
     identifiers: ColumnIdentifiers<TResult>
-  ) => TaggedTemplateLiteralInvocation<any>;
+  ) => SqlToken;
   info?: Pick<GraphQLResolveInfo, "fieldNodes" | "fragments">;
 };
 
@@ -36,7 +36,7 @@ export const createConnectionLoaderClass = <
   TResult extends Record<string, any>
 >(config: {
   columnNameTransformer?: (column: string) => string;
-  query: TaggedTemplateLiteralInvocation<TResult>;
+  query: QuerySqlToken;
 }) => {
   const { columnNameTransformer = snakeCase, query } = config;
   const columnIdentifiers = getColumnIdentifiers<TResult>(
@@ -59,8 +59,8 @@ export const createConnectionLoaderClass = <
     ) {
       super(
         async (loaderKeys) => {
-          const edgesQueries: TaggedTemplateLiteralInvocation<any>[] = [];
-          const countQueries: TaggedTemplateLiteralInvocation<any>[] = [];
+          const edgesQueries: QuerySqlToken[] = [];
+          const countQueries: QuerySqlToken[] = [];
 
           loaderKeys.forEach((loaderKey, index) => {
             const {
@@ -78,27 +78,27 @@ export const createConnectionLoaderClass = <
               : new Set(["pageInfo", "edges", "count"]);
 
             const conditions: SqlToken[] = where
-              ? [sql`(${where(columnIdentifiers)})`]
+              ? [sql.fragment`(${where(columnIdentifiers)})`]
               : [];
             const queryKey = String(index);
 
-            const selectExpressions = [sql`${queryKey} "key"`];
+            const selectExpressions = [sql.fragment`${queryKey} "key"`];
 
             if (requestedFields.has("count")) {
               countQueries.push(
-                sql`(
+                sql.unsafe`(
                   SELECT
                     ${sql.join(
-                      [...selectExpressions, sql`count(*) count`],
-                      sql`, `
+                      [...selectExpressions, sql.fragment`count(*) count`],
+                      sql.fragment`, `
                     )}
                   FROM (
                     ${query}
                   ) ${sql.identifier([TABLE_ALIAS])}
                   WHERE ${
                     conditions.length
-                      ? sql`${sql.join(conditions, sql` AND `)}`
-                      : sql`true`
+                      ? sql.fragment`${sql.join(conditions, sql.fragment` AND `)}`
+                      : sql.fragment`TRUE`
                   }
                 )`
               );
@@ -113,14 +113,14 @@ export const createConnectionLoaderClass = <
                 : [];
 
               selectExpressions.push(
-                sql`${sql.identifier([TABLE_ALIAS])}.*`,
-                sql`json_build_array(${
+                sql.fragment`${sql.identifier([TABLE_ALIAS])}.*`,
+                sql.fragment`json_build_array(${
                   orderByExpressions.length
                     ? sql.join(
                         orderByExpressions.map(([expression]) => expression),
-                        sql`,`
+                        sql.fragment`,`
                       )
-                    : sql``
+                    : sql.fragment``
                 }) ${sql.identifier([SORT_COLUMN_ALIAS])}`
               );
 
@@ -128,56 +128,56 @@ export const createConnectionLoaderClass = <
                 ? sql.join(
                     orderByExpressions.map(
                       ([expression, direction]) =>
-                        sql`${expression} ${
+                        sql.fragment`${expression} ${
                           direction === (reverse ? "DESC" : "ASC")
-                            ? sql`ASC`
-                            : sql`DESC`
+                            ? sql.fragment`ASC`
+                            : sql.fragment`DESC`
                         }`
                     ),
-                    sql`,`
+                    sql.fragment`,`
                   )
-                : sql`true`;
+                : sql.fragment`TRUE`;
 
               if (cursor) {
                 const values = fromCursor(cursor);
                 conditions.push(
-                  sql`(${sql.join(
+                  sql.fragment`(${sql.join(
                     orderByExpressions.map((_orderByExpression, outerIndex) => {
                       const expressions = orderByExpressions.slice(
                         0,
                         outerIndex + 1
                       );
 
-                      return sql`(${sql.join(
+                      return sql.fragment`(${sql.join(
                         expressions.map(
                           ([expression, direction], innerIndex) => {
-                            let comparisonOperator = sql`=`;
+                            let comparisonOperator = sql.fragment`=`;
                             if (innerIndex === expressions.length - 1) {
                               comparisonOperator =
                                 direction === (reverse ? "DESC" : "ASC")
-                                  ? sql`>`
-                                  : sql`<`;
+                                  ? sql.fragment`>`
+                                  : sql.fragment`<`;
                             }
 
-                            return sql`${expression} ${comparisonOperator} ${values[innerIndex]}`;
+                            return sql.fragment`${expression} ${comparisonOperator} ${values[innerIndex]}`;
                           }
                         ),
-                        sql` AND `
+                        sql.fragment` AND `
                       )})`;
                     }),
-                    sql` OR `
+                    sql.fragment` OR `
                   )})`
                 );
               }
 
               const whereExpression = conditions.length
-                ? sql`${sql.join(conditions, sql` AND `)}`
-                : sql`true`;
+                ? sql.fragment`${sql.join(conditions, sql.fragment` AND `)}`
+                : sql.fragment`TRUE`;
 
               edgesQueries.push(
-                sql`(
+                sql.unsafe`(
                   SELECT
-                    ${sql.join(selectExpressions, sql`, `)}
+                    ${sql.join(selectExpressions, sql.fragment`, `)}
                   FROM (
                     ${query}
                   ) ${sql.identifier([TABLE_ALIAS])}
@@ -197,17 +197,17 @@ export const createConnectionLoaderClass = <
             extendedParser = parser.extend({
               key: z.union([z.string(), z.number()]),
               s1: z.array(z.union([z.string(), z.number()])),
-            });
+            }) as ZodTypeAny;
           }
 
-          const sqlTag = extendedParser ? sql.type(extendedParser) : sql;
+          const sqlTag = extendedParser ? sql.type(extendedParser) : sql.unsafe;
 
           const [edgesRecords, countRecords] = await Promise.all([
             edgesQueries.length
-              ? pool.any<any>(sqlTag`${sql.join(edgesQueries, sql`UNION ALL`)}`)
+              ? pool.any(sqlTag`${sql.join(edgesQueries, sql.fragment`UNION ALL`)}`)
               : [],
             countQueries.length
-              ? pool.any<any>(sql`${sql.join(countQueries, sql`UNION ALL`)}`)
+              ? pool.any(sql.unsafe`${sql.join(countQueries, sql.fragment`UNION ALL`)}`)
               : [],
           ]);
 
