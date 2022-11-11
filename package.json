@@ -1,6 +1,6 @@
 {
   "name": "slonik-dataloaders",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Utilities for creating DataLoaders using Slonik",
   "main": "dist/index.js",
   "files": [
