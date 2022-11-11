@@ -185,10 +185,14 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
 
           const parser = query.parser as unknown as AnyZodObject;
 
-          const extendedParser = parser.extend({
+          // @ts-expect-error Accessing internal property to determine if parser is an instance of z.any()
+          const extendedParser = parser._any === true ? z.object({
             key: z.union([z.string(), z.number()]),
-            s1: z.array(z.union([z.string(), z.number()])),
-          }) as ZodTypeAny;
+            s1: z.array(z.unknown()),
+          }) : parser.extend({
+            key: z.union([z.string(), z.number()]),
+            s1: z.array(z.unknown()),
+          });
 
           const [edgesRecords, countRecords] = await Promise.all([
             edgesQueries.length
