@@ -11,7 +11,7 @@ import {
   toCursor,
 } from "../utilities";
 
-export type DataLoaderKey<TResult, TArgs> = {
+export type DataLoaderKey<TResult, TArgs=never> = {
   cursor?: string | null;
   limit?: number | null;
   reverse?: boolean;
@@ -26,7 +26,7 @@ export type DataLoaderKey<TResult, TArgs> = {
 const SORT_COLUMN_ALIAS = "s1";
 const TABLE_ALIAS = "t1";
 
-export const createConnectionLoaderClass = <T extends ZodTypeAny, TArgs>(config: {
+export const createConnectionLoaderClass = <T extends ZodTypeAny, TArgs=never>(config: {
   columnNameTransformer?: (column: string) => string;
   query: QuerySqlToken<T> | ((args?: TArgs) => QuerySqlToken<T>);
 }) => {
