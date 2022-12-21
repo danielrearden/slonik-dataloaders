@@ -189,7 +189,7 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
           const extendedParser = parser._any === true ? z.object({
             key: z.union([z.string(), z.number()]),
             s1: z.array(z.unknown()),
-          }) : parser.extend({
+          }).passthrough() : parser.extend({
             key: z.union([z.string(), z.number()]),
             s1: z.array(z.unknown()),
           });
