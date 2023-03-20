@@ -11,10 +11,11 @@ import {
   toCursor,
 } from "../utilities";
 
-export type DataLoaderKey<TResult> = {
+export type DataLoaderKey<TResult, TArgs=never> = {
   cursor?: string | null;
   limit?: number | null;
   reverse?: boolean;
+  args?: TArgs;
   orderBy?: (
     identifiers: ColumnIdentifiers<TResult>
   ) => [SqlToken, OrderDirection][];
@@ -25,25 +26,25 @@ export type DataLoaderKey<TResult> = {
 const SORT_COLUMN_ALIAS = "s1";
 const TABLE_ALIAS = "t1";
 
-export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
+export const createConnectionLoaderClass = <T extends ZodTypeAny, TArgs=never>(config: {
   columnNameTransformer?: (column: string) => string;
-  query: QuerySqlToken<T>;
+  query: QuerySqlToken<T> | ((args?: TArgs) => QuerySqlToken<T>);
 }) => {
-  const { columnNameTransformer = snakeCase, query } = config;
+  const { columnNameTransformer = snakeCase } = config;
   const columnIdentifiers = getColumnIdentifiers<z.infer<T>>(
     TABLE_ALIAS,
     columnNameTransformer
   );
 
   return class ConnectionLoaderClass extends DataLoader<
-    DataLoaderKey<z.infer<T>>,
+    DataLoaderKey<z.infer<T>, TArgs>,
     Connection<z.infer<T>>,
     string
   > {
     constructor(
       pool: CommonQueryMethods,
       dataLoaderOptions?: DataLoader.Options<
-        DataLoaderKey<z.infer<T>>,
+        DataLoaderKey<z.infer<T>, TArgs>,
         Connection<z.infer<T>>,
         string
       >
@@ -52,8 +53,9 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
         async (loaderKeys) => {
           const edgesQueries: QuerySqlToken[] = [];
           const countQueries: QuerySqlToken[] = [];
-
+          
           loaderKeys.forEach((loaderKey, index) => {
+            const query = typeof config.query === 'function' ? config.query(loaderKey.args) : config.query;
             const {
               cursor,
               info,
@@ -183,7 +185,7 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
             }
           });
 
-          const parser = query.parser as unknown as AnyZodObject;
+          const parser = (typeof config.query === 'function' ? config.query().parser : config.query.parser) as unknown as AnyZodObject;
 
           // @ts-expect-error Accessing internal property to determine if parser is an instance of z.any()
           const extendedParser = parser._any === true ? z.object({
@@ -278,6 +280,7 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
             info,
             limit,
             orderBy,
+            args,
             reverse = false,
             where,
           }) => {
@@ -289,7 +292,7 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
               orderBy?.(columnIdentifiers)
             )}|${JSON.stringify(
               where?.(columnIdentifiers)
-            )}|${requestedFields.values()}`;
+            )}|${requestedFields.values()}|${JSON.stringify(args)}`;
           },
         }
       );

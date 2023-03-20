@@ -116,6 +116,35 @@ const UserConnectionLoader = createConnectionLoaderClass<
 
 In the example above, if the field on the Edge type in the schema is named `createdAt`, we just need to write a resolver for it and resolve the value to that of the `edgeCreatedAt` property.
 
+#### Dynamic queries
+
+If you need more flexibility, it's possible to dynamically build queries by specifying a function instead of a static query.
+The function must return a slonik query, and it takes any arguments as input. For example:
+
+```ts
+const UserConnectionLoader = createConnectionLoaderClass<
+  User & { edgeCreatedAt }
+>({
+  query: ({ friendName }: { friendName: string }) => sql.unsafe`
+    SELECT
+      user.*
+    FROM user
+    INNER JOIN friend ON
+      user.id = friend.user_id
+    WHERE friend.name ILIKE ${sql.literalValue(args.friendName)}
+  `,
+});
+```
+
+Those arguments can then be passed down while loading
+
+```ts
+const connection = await loader.load({
+  args: { friendName: 'bob' }
+  orderBy: ({ name }) => [[name, "ASC"]],
+});
+```
+
 ### `columnNameTransformer`
 
 Both types of loaders also accept an `columnNameTransformer` option. By default, the transformer used is [snake-case](https://www.npmjs.com/package/snake-case). The default assumes:
