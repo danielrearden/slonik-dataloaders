@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "rimraf dist && tsc",
+    "prepublishOnly": "rimraf dist && tsc",
     "test": "jest",
     "lint": "prettier --check ."
   },
