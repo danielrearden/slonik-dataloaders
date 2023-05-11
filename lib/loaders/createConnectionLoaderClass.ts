@@ -177,15 +177,14 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
             }
           });
 
-          if (!(query.parser instanceof z.ZodObject)) {
-            throw new Error(
-              "Invalid query parser. Provided schema must be a ZodObject."
-            );
-          }
-
-          const edgeSchema = query.parser.extend({
+          let edgeSchema: z.AnyZodObject = z.object({
             [SORT_COLUMN_ALIAS]: z.array(z.any()),
           });
+
+          if ("extend" in query.parser) {
+            edgeSchema = edgeSchema.extend(query.parser as any);
+          }
+
           const countSchema = z.object({
             count: z.number(),
           });

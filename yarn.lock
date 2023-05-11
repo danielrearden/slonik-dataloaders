@@ -655,6 +655,15 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.11.9.tgz#02d013de7058cea16d36168ef2fc653464cfbad4"
   integrity sha512-CRpX21/kGdzjOpFsZSkcrXMGIBWMGNIHXXBVFSH+ggkftxg+XYP20TESbh+zFvFj3EQOl5byk0HTRn1IL6hbqg==
 
+"@types/pg@^8.6.6":
+  version "8.6.6"
+  resolved "https://registry.yarnpkg.com/@types/pg/-/pg-8.6.6.tgz#21cdf873a3e345a6e78f394677e3b3b1b543cb80"
+  integrity sha512-O2xNmXebtwVekJDD+02udOncjVcMZQuTEQEMpKJ0ZRf5E7/9JJX3izhKUcUifBkyKpljyUM6BTgy2trmviKlpw==
+  dependencies:
+    "@types/node" "*"
+    pg-protocol "*"
+    pg-types "^2.2.0"
+
 "@types/prettier@^2.1.5":
   version "2.7.1"
   resolved "https://registry.yarnpkg.com/@types/prettier/-/prettier-2.7.1.tgz#dfd20e2dc35f027cdd6c1908e80a5ddc7499670e"
@@ -2096,17 +2105,17 @@ pg-copy-streams-binary@^2.2.0:
     multi-fork "0.0.2"
     through2 "^3.0.1"
 
-pg-copy-streams@^6.0.4:
-  version "6.0.4"
-  resolved "https://registry.yarnpkg.com/pg-copy-streams/-/pg-copy-streams-6.0.4.tgz#eca6b081f6c2655b8f3f0979b1537c5f7739cc03"
-  integrity sha512-FH6q2nFo0n2cFacLyIKorjDz8AOYtxrAANx1XMvYbKWNM2geY731gZstuP4mXMlqO6urRl9oIscFxf3GMIg3Ng==
+pg-copy-streams@^6.0.5:
+  version "6.0.5"
+  resolved "https://registry.yarnpkg.com/pg-copy-streams/-/pg-copy-streams-6.0.5.tgz#20065eefe2ae789857a72a275e95afa6a6c82c1b"
+  integrity sha512-HcjUCaeEputOnSTgRQrkUkOKEBtyfcXsrrf6FA7z6AgesRxR35GRovk5Akw1LYRNwSFYpc9XVVxLrxYCWwNHMg==
   dependencies:
     obuf "^1.1.2"
 
-pg-cursor@^2.8.0:
-  version "2.8.0"
-  resolved "https://registry.yarnpkg.com/pg-cursor/-/pg-cursor-2.8.0.tgz#7cb0929ad33ea68fe15d25b0de34acd611e189d5"
-  integrity sha512-LrOaEHK+R1C40e+xeri3FTRY/VKp9uTOCVsKtGB7LJ57qbeaphYvWjbVly8AesdT1GfHXYcAnVdExKhW7DKOvA==
+pg-cursor@^2.9.0:
+  version "2.9.0"
+  resolved "https://registry.yarnpkg.com/pg-cursor/-/pg-cursor-2.9.0.tgz#6e55af7511a484f9c8f4100f519990fb9c8e797c"
+  integrity sha512-tNX0FbHX6+hlhZVNbxhSQPDMNMFF6mOWQvwDobPROAFpilmXrZo3FozawqaBQKonFKpBloZZyWUL3Kkf5rLn6A==
 
 pg-int8@1.0.1:
   version "1.0.1"
@@ -2118,17 +2127,17 @@ pg-numeric@1.0.2:
   resolved "https://registry.yarnpkg.com/pg-numeric/-/pg-numeric-1.0.2.tgz#816d9a44026086ae8ae74839acd6a09b0636aa3a"
   integrity sha512-BM/Thnrw5jm2kKLE5uJkXqqExRUY/toLHda65XgFTBTFYZyopbKjBe29Ii3RbkvlsMoFwD+tHeGaCjjv0gHlyw==
 
-pg-pool@^3.5.2:
-  version "3.5.2"
-  resolved "https://registry.yarnpkg.com/pg-pool/-/pg-pool-3.5.2.tgz#ed1bed1fb8d79f1c6fd5fb1c99e990fbf9ddf178"
-  integrity sha512-His3Fh17Z4eg7oANLob6ZvH8xIVen3phEZh2QuyrIl4dQSDVEabNducv6ysROKpDNPSD+12tONZVWfSgMvDD9w==
+pg-pool@^3.6.0:
+  version "3.6.0"
+  resolved "https://registry.yarnpkg.com/pg-pool/-/pg-pool-3.6.0.tgz#3190df3e4747a0d23e5e9e8045bcd99bda0a712e"
+  integrity sha512-clFRf2ksqd+F497kWFyM21tMjeikn60oGDmqMT8UBrynEwVEX/5R5xd2sdvdo1cZCFlguORNpVuqxIj+aK4cfQ==
 
-pg-protocol@^1.6.0:
+pg-protocol@*, pg-protocol@^1.6.0:
   version "1.6.0"
   resolved "https://registry.yarnpkg.com/pg-protocol/-/pg-protocol-1.6.0.tgz#4c91613c0315349363af2084608db843502f8833"
   integrity sha512-M+PDm637OY5WM307051+bsDia5Xej6d9IR4GwJse1qA1DIhiKlksvrneZOYQq42OM+spubpcNYEo2FcKQrDk+Q==
 
-pg-types@^2.1.0:
+pg-types@^2.1.0, pg-types@^2.2.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/pg-types/-/pg-types-2.2.0.tgz#2d0250d636454f7cfa3b6ae0382fdfa8063254a3"
   integrity sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==
@@ -2152,15 +2161,15 @@ pg-types@^4.0.1:
     postgres-interval "^3.0.0"
     postgres-range "^1.1.1"
 
-pg@^8.9.0:
-  version "8.9.0"
-  resolved "https://registry.yarnpkg.com/pg/-/pg-8.9.0.tgz#73c5d77a854d36b0e185450dacb8b90c669e040b"
-  integrity sha512-ZJM+qkEbtOHRuXjmvBtOgNOXOtLSbxiMiUVMgE4rV6Zwocy03RicCVvDXgx8l4Biwo8/qORUnEqn2fdQzV7KCg==
+pg@^8.10.0:
+  version "8.10.0"
+  resolved "https://registry.yarnpkg.com/pg/-/pg-8.10.0.tgz#5b8379c9b4a36451d110fc8cd98fc325fe62ad24"
+  integrity sha512-ke7o7qSTMb47iwzOSaZMfeR7xToFdkE71ifIipOAAaLIM0DYzfOAXlgFFmYUIE2BcJtvnVlGCID84ZzCegE8CQ==
   dependencies:
     buffer-writer "2.0.0"
     packet-reader "1.0.0"
     pg-connection-string "^2.5.0"
-    pg-pool "^3.5.2"
+    pg-pool "^3.6.0"
     pg-protocol "^1.6.0"
     pg-types "^2.1.0"
     pgpass "1.x"
@@ -2194,7 +2203,7 @@ pkg-dir@^4.2.0:
   dependencies:
     find-up "^4.0.0"
 
-postgres-array@^3.0.1, postgres-array@~3.0.1:
+postgres-array@^3.0.2, postgres-array@~3.0.1:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/postgres-array/-/postgres-array-3.0.2.tgz#68d6182cb0f7f152a7e60dc6a6889ed74b0a5f98"
   integrity sha512-6faShkdFugNQCLwucjPcY5ARoW1SlbnrZjmGl0IrrqewpvxvhSLHimCVzqeuULCbG0fQv7Dtk1yDbG3xv7Veog==
@@ -2339,10 +2348,10 @@ rimraf@^3.0.2:
   dependencies:
     glob "^7.1.3"
 
-roarr@^7.14.1:
-  version "7.14.3"
-  resolved "https://registry.yarnpkg.com/roarr/-/roarr-7.14.3.tgz#ff163bf9488222f327ee65cdee18018e790eb645"
-  integrity sha512-AvUQY27C6/biXEAyYUXc8ONBtP1cA3MQM88e24Fmsl3LAqtNR309nMaWFALYk7ORTqgGrgrjBJ1vE20DZAc5qA==
+roarr@^7.15.0:
+  version "7.15.0"
+  resolved "https://registry.yarnpkg.com/roarr/-/roarr-7.15.0.tgz#09b792f0cd31b4a7f91030bb1c47550ceec98ee4"
+  integrity sha512-CV9WefQfUXTX6wr8CrEMhfNef3sjIt9wNhE/5PNu4tNWsaoDNDXqq+OGn/RW9A1UPb0qc7FQlswXRaJJJsqn8A==
   dependencies:
     boolean "^3.1.4"
     fast-json-stringify "^2.7.10"
@@ -2360,6 +2369,11 @@ safe-stable-stringify@^2.4.1:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/safe-stable-stringify/-/safe-stable-stringify-2.4.2.tgz#ec7b037768098bf65310d1d64370de0dc02353aa"
   integrity sha512-gMxvPJYhP0O9n2pvcfYfIuYgbledAOJFcqRThtPRmjscaipiwcwPPKLytpVzMkG2HAN87Qmo2d4PtGiri1dSLA==
+
+safe-stable-stringify@^2.4.3:
+  version "2.4.3"
+  resolved "https://registry.yarnpkg.com/safe-stable-stringify/-/safe-stable-stringify-2.4.3.tgz#138c84b6f6edb3db5f8ef3ef7115b8f55ccbf886"
+  integrity sha512-e2bDA2WJT0wxseVd4lsDP4+3ONX6HpMXQa1ZhFQ7SU+GjvORCmShbCMltrtIDfkYhVHrOcPtj+KhmDBdPdZD1g==
 
 semver-compare@^1.0.0:
   version "1.0.0"
@@ -2421,27 +2435,28 @@ slonik-interceptor-query-logging@^1.4.7:
     pretty-ms "^7.0.1"
     serialize-error "^8.0.0"
 
-slonik@^33.1.0:
-  version "33.1.0"
-  resolved "https://registry.yarnpkg.com/slonik/-/slonik-33.1.0.tgz#da91762ababb8824c351493ab22ce56b93e0d8df"
-  integrity sha512-CBzW75kacP2aBq/iI9VPYkx+fGk1fPV3cxv6u/y7Oobfa4U+c5o3FlALUQRUIu4j0pUvOTIoeHNf34fjoPAweA==
+slonik@^33.3.1:
+  version "33.3.1"
+  resolved "https://registry.yarnpkg.com/slonik/-/slonik-33.3.1.tgz#5ab89215c0fa2f7da10d1ee77cdad5a60351370b"
+  integrity sha512-LhfWwt/gq9xSfRhFVm2rNY7sRG2LLbkvuoPs/3fu9e4OS6TzjDyYdG6+QU0fDRv8lcL9y1KDFJ5kzCU1SyN9SQ==
   dependencies:
+    "@types/pg" "^8.6.6"
     concat-stream "^2.0.0"
     es6-error "^4.1.1"
     get-stack-trace "^2.1.1"
     is-plain-object "^5.0.0"
     iso8601-duration "^1.3.0"
     p-defer "^3.0.0"
-    pg "^8.9.0"
-    pg-copy-streams "^6.0.4"
+    pg "^8.10.0"
+    pg-copy-streams "^6.0.5"
     pg-copy-streams-binary "^2.2.0"
-    pg-cursor "^2.8.0"
+    pg-cursor "^2.9.0"
     pg-protocol "^1.6.0"
     pg-types "^4.0.1"
-    postgres-array "^3.0.1"
+    postgres-array "^3.0.2"
     postgres-interval "^4.0.0"
-    roarr "^7.14.1"
-    safe-stable-stringify "^2.4.1"
+    roarr "^7.15.0"
+    safe-stable-stringify "^2.4.3"
     serialize-error "^8.0.0"
     through2 "^4.0.2"
 

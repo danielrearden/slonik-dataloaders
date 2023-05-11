@@ -25,11 +25,13 @@ const getInfo = (
 
 const BarConnectionLoader = createConnectionLoaderClass({
   query: sql.type(
-    z.object({
-      id: z.number(),
-      uid: z.string(),
-      value: z.string(),
-    })
+    z
+      .object({
+        id: z.number(),
+        uid: z.string(),
+        value: z.string(),
+      })
+      .strict()
   )`
     SELECT
       *
