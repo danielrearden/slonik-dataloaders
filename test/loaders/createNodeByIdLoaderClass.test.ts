@@ -1,7 +1,7 @@
-import { createPool, DatabasePool, sql } from "slonik";
-import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
+import { DatabasePool, sql } from "slonik";
 import { z } from "zod";
 import { createNodeByIdLoaderClass } from "../../lib";
+import { createDatabasePool } from "../utilities/createDatabasePool";
 
 const FooByIdLoader = createNodeByIdLoaderClass({
   query: sql.type(
@@ -20,9 +20,7 @@ describe("createRecordByUniqueColumnLoader", () => {
   let pool: DatabasePool;
 
   beforeAll(async () => {
-    pool = await createPool(process.env.POSTGRES_DSN || "", {
-      interceptors: [createQueryLoggingInterceptor()],
-    });
+    pool = await createDatabasePool();
 
     await pool.query(sql.unsafe`
       CREATE TABLE IF NOT EXISTS test_table_foo (

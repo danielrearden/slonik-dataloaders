@@ -9,7 +9,7 @@
   "scripts": {
     "build": "rimraf dist && tsc",
     "prepublishOnly": "rimraf dist && tsc",
-    "test": "jest",
+    "test": "jest test/loaders",
     "lint": "prettier --check ."
   },
   "keywords": [

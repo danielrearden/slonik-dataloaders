@@ -5,9 +5,9 @@ import {
   parse,
 } from "graphql";
 import { z } from "zod";
-import { createPool, DatabasePool, sql } from "slonik";
-import { createQueryLoggingInterceptor } from "slonik-interceptor-query-logging";
+import { DatabasePool, SchemaValidationError, sql } from "slonik";
 import { createConnectionLoaderClass } from "../../lib";
+import { createDatabasePool } from "../utilities/createDatabasePool";
 
 const getInfo = (
   fields: string[]
@@ -39,13 +39,24 @@ const BarConnectionLoader = createConnectionLoaderClass({
   `,
 });
 
+const BadConnectionLoader = createConnectionLoaderClass({
+  query: sql.type(
+    z.object({
+      id: z.number(),
+      uid: z.string(),
+    })
+  )`
+    SELECT
+      *
+    FROM test_table_bar
+  `,
+});
+
 describe("createConnectionLoaderClass", () => {
   let pool: DatabasePool;
 
   beforeAll(async () => {
-    pool = await createPool(process.env.POSTGRES_DSN || "", {
-      interceptors: [createQueryLoggingInterceptor()],
-    });
+    pool = await createDatabasePool();
 
     await pool.query(sql.unsafe`
       CREATE TABLE IF NOT EXISTS test_table_bar (
@@ -368,5 +379,10 @@ describe("createConnectionLoaderClass", () => {
     expect(results[0].edges.length).toEqual(2);
     expect(results[1].count).toEqual(0);
     expect(results[1].edges.length).toEqual(1);
+  });
+
+  it("fails with schema validation error", async () => {
+    const loader = new BadConnectionLoader(pool, {});
+    await expect(loader.load({})).rejects.toThrowError(SchemaValidationError);
   });
 });

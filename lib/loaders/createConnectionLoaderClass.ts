@@ -177,12 +177,15 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
             }
           });
 
-          let edgeSchema: z.AnyZodObject = z.object({
-            [SORT_COLUMN_ALIAS]: z.array(z.any()),
-          });
+          let edgeSchema: ZodTypeAny = z.any();
 
-          if ("extend" in query.parser) {
-            edgeSchema = edgeSchema.extend(query.parser as any);
+          if ("shape" in query.parser) {
+            edgeSchema = z
+              .object({
+                [SORT_COLUMN_ALIAS]: z.array(z.any()),
+                ...(query.parser as any).shape,
+              })
+              .strict();
           }
 
           const countSchema = z.object({
@@ -210,6 +213,7 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
 
               let index = 0;
               while (true) {
+                // @ts-ignore
                 const value = record[SORT_COLUMN_ALIAS]?.[index];
                 if (value !== undefined) {
                   cursorValues.push(value);
@@ -221,6 +225,7 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
 
               // Stripe out `__typename`, otherwise if the connection object is returned inside a resolver,
               // GraphQL will throw an error because the typename won't match the edge type
+              // @ts-ignore
               const { __typename, ...edgeFields } = record;
 
               return {
