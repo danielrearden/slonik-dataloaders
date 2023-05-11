@@ -219,8 +219,12 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
                 }
               }
 
+              // Stripe out `__typename`, otherwise if the connection object is returned inside a resolver,
+              // GraphQL will throw an error because the typename won't match the edge type
+              const { __typename, ...edgeFields } = record;
+
               return {
-                ...record,
+                ...edgeFields,
                 cursor: toCursor(cursorValues),
                 node: record,
               };
