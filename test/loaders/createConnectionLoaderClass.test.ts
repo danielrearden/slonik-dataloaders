@@ -296,6 +296,7 @@ describe("createConnectionLoaderClass", () => {
   it("caches loaded records", async () => {
     const loader = new BarConnectionLoader(pool, {});
     const poolAnySpy = jest.spyOn(pool, "any");
+    const poolOneFirstSpy = jest.spyOn(pool, "oneFirst");
     poolAnySpy.mockClear();
     const resultsA = await loader.load({
       orderBy: ({ uid }) => [[uid, "ASC"]],
@@ -304,7 +305,8 @@ describe("createConnectionLoaderClass", () => {
       orderBy: ({ uid }) => [[uid, "ASC"]],
     });
 
-    expect(poolAnySpy).toHaveBeenCalledTimes(2);
+    expect(poolAnySpy).toHaveBeenCalledTimes(1);
+    expect(poolOneFirstSpy).toHaveBeenCalledTimes(1);
     expect(resultsA.edges[0].node.id).toEqual(9);
     expect(resultsA.edges[8].node.id).toEqual(1);
     expect(resultsB.edges[0].node.id).toEqual(9);
