@@ -51,8 +51,8 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
     ) {
       super(
         async (loaderKeys) => {
-          const edgesQueries: QuerySqlToken[] = [];
-          const countQueries: QuerySqlToken[] = [];
+          const edgesQueries: (QuerySqlToken | null)[] = [];
+          const countQueries: (QuerySqlToken | null)[] = [];
 
           loaderKeys.forEach((loaderKey) => {
             const {
@@ -92,6 +92,8 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
                   }
                 )`
               );
+            } else {
+              countQueries.push(null);
             }
 
             if (
@@ -177,6 +179,8 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
                   OFFSET ${offset || 0}
                 )`
               );
+            } else {
+              edgesQueries.push(null);
             }
           });
 
@@ -198,12 +202,16 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
           const [edgeResults, countResults] = await Promise.all([
             Promise.all(
               edgesQueries.map((query) => {
-                return pool.any(sql.type(edgeSchema)`${query}`);
+                return query === null
+                  ? []
+                  : pool.any(sql.type(edgeSchema)`${query}`);
               })
             ),
             Promise.all(
               countQueries.map((query) => {
-                return pool.oneFirst(sql.type(countSchema)`${query}`);
+                return query === null
+                  ? 0
+                  : pool.oneFirst(sql.type(countSchema)`${query}`);
               })
             ),
           ]);
@@ -226,7 +234,7 @@ export const createConnectionLoaderClass = <T extends ZodTypeAny>(config: {
                 }
               }
 
-              // Stripe out `__typename`, otherwise if the connection object is returned inside a resolver,
+              // Strip out `__typename`, otherwise if the connection object is returned inside a resolver,
               // GraphQL will throw an error because the typename won't match the edge type
               // @ts-ignore
               const { __typename, ...edgeFields } = record;
