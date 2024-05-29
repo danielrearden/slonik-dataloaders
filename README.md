@@ -1,3 +1,5 @@
+This library has been incorporated into the slonik monorepo [here](https://github.com/gajus/slonik/tree/main/packages/slonik-dataloaders).
+
 # `slonik-dataloaders`
 
 `slonik-dataloaders` is a set of utilities for creating [DataLoaders](https://github.com/graphql/dataloader) using [Slonik](https://github.com/gajus/slonik). These DataLoaders abstract away some of the complexity of working with cursor-style pagination when working with a SQL database, while still maintaining the flexibility that comes with writing raw SQL statements.
